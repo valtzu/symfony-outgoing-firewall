@@ -45,26 +45,29 @@ final class RuleSetTest extends FirewallTestCase
     }
 
     /**
-     * @return iterable<string, array{array<string, mixed>, string}>
+     * @return iterable<string, array{string|array<string, mixed>|null, string}>
      */
-    public static function matcherShorthands(): iterable
+    public static function conditions(): iterable
     {
-        yield 'none' => [[], 'true'];
+        yield 'none' => [null, 'true'];
+        yield 'expression string' => ['hour < 6', 'hour < 6'];
         yield 'host and path' => [['host' => ['Foo.com'], 'path' => ['/bar']], "host == 'foo.com' and path == '/bar'"];
         yield 'list' => [['method' => ['get', 'head']], "method in ['GET', 'HEAD']"];
         yield 'port is an int' => [['port' => ['8080']], 'port == 8080'];
         yield 'quotes are escaped' => [['path' => ["/it's"]], "path == '/it\\'s'"];
-        yield 'combined with if' => [['host' => ['foo.com'], 'if' => "weekday == 'Sun' or hour < 6"], "host == 'foo.com' and (weekday == 'Sun' or hour < 6)"];
-        yield 'if alone is untouched' => [['if' => 'hour < 6'], 'hour < 6'];
+        yield 'tag' => [['tags' => ['external']], 'tags.external'];
+        yield 'any of several tags' => [['tags' => ['a', 'pre-prod']], "(tags.a or tags['pre-prod'])"];
+        yield 'matchers and expression' => [['host' => ['foo.com'], 'expression' => "weekday == 'Sun' or hour < 6"], "host == 'foo.com' and (weekday == 'Sun' or hour < 6)"];
+        yield 'expression alone is untouched' => [['expression' => 'hour < 6'], 'hour < 6'];
     }
 
     /**
-     * @param array<string, mixed> $rule
+     * @param string|array<string, mixed>|null $condition
      */
-    #[\PHPUnit\Framework\Attributes\DataProvider('matcherShorthands')]
-    public function testMatcherKeysCompileToAnExpression(array $rule, string $expected): void
+    #[\PHPUnit\Framework\Attributes\DataProvider('conditions')]
+    public function testConditionCompilesToAnExpression(string|array|null $condition, string $expected): void
     {
-        $ruleSet = self::ruleSet(['rules' => [self::rule($rule + ['action' => 'block'])]]);
+        $ruleSet = self::ruleSet(['rules' => [self::rule(['if' => $condition, 'action' => 'block'])]]);
 
         self::assertSame($expected, $ruleSet->rules[0]->if);
     }

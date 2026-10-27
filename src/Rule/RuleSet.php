@@ -75,9 +75,14 @@ final readonly class RuleSet
      */
     private static function compileWhen(array $rule): string
     {
+        $condition = $rule['if'] ?? null;
+        if (!\is_array($condition)) {
+            $condition = ['expression' => $condition];
+        }
+
         $conditions = [];
         foreach (self::MATCHERS as $variable) {
-            if ([] === ($values = $rule[$variable] ?? [])) {
+            if ([] === ($values = $condition[$variable] ?? [])) {
                 continue;
             }
 
@@ -85,8 +90,13 @@ final readonly class RuleSet
             $conditions[] = 1 === \count($literals) ? \sprintf('%s == %s', $variable, $literals[0]) : \sprintf('%s in [%s]', $variable, implode(', ', $literals));
         }
 
-        if (null !== ($rule['if'] ?? null)) {
-            $conditions[] = [] === $conditions ? $rule['if'] : '('.$rule['if'].')';
+        if ([] !== ($tags = $condition['tags'] ?? [])) {
+            $reads = array_map(static fn (string $tag): string => 1 === preg_match('/^[A-Za-z_]\w*$/', $tag) ? 'tags.'.$tag : 'tags['.self::literal($tag).']', $tags);
+            $conditions[] = 1 === \count($reads) ? $reads[0] : '('.implode(' or ', $reads).')';
+        }
+
+        if (null !== ($expression = $condition['expression'] ?? null)) {
+            $conditions[] = [] === $conditions ? $expression : '('.$expression.')';
         }
 
         return [] === $conditions ? 'true' : implode(' and ', $conditions);

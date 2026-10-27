@@ -62,7 +62,7 @@ final class BundleTest extends TestCase
     public function testMatcherShorthandsFromConfig(): void
     {
         $kernel = new TestKernel(['rules' => [
-            ['host' => 'example.com', 'path' => '/admin', 'method' => ['post', 'delete'], 'action' => 'block'],
+            ['if' => ['host' => 'example.com', 'path' => '/admin', 'method' => ['post', 'delete']], 'action' => 'block'],
         ]], mockTransport: true);
         $kernel->boot();
         $client = $kernel->getContainer()->get('test.plain');
@@ -72,6 +72,21 @@ final class BundleTest extends TestCase
 
         $this->expectException(RequestBlockedException::class);
         $client->request('POST', '/admin');
+    }
+
+    public function testTagConditionAndEffectAreDistinctInConfig(): void
+    {
+        $kernel = new TestKernel(['rules' => [
+            ['if' => ['host' => 'example.com'], 'tag' => 'internal'],
+            ['if' => ['tags' => 'internal', 'method' => 'POST'], 'action' => 'block'],
+        ]], mockTransport: true);
+        $kernel->boot();
+        $client = $kernel->getContainer()->get('test.plain');
+
+        self::assertSame('mocked', $client->request('GET', '/')->getContent());
+
+        $this->expectException(RequestBlockedException::class);
+        $client->request('POST', '/');
     }
 
     public function testInvalidConfigIsRejectedAtBuildTime(): void

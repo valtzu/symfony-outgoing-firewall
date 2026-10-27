@@ -152,8 +152,8 @@ final class FirewallHttpClientTest extends FirewallTestCase
     {
         $log = new RequestLog();
         $client = self::client(self::ruleSet(['rules' => [
-            self::rule(['host' => ['blocked.example.com'], 'action' => 'block']),
-            self::rule(['host' => ['logged.example.com'], 'action' => 'log']),
+            self::rule(['if' => ['host' => ['blocked.example.com']], 'action' => 'block']),
+            self::rule(['if' => ['host' => ['logged.example.com']], 'action' => 'log']),
         ]]), log: $log);
 
         $client->request('GET', 'https://plain.example.com/')->getContent();
@@ -171,7 +171,7 @@ final class FirewallHttpClientTest extends FirewallTestCase
         $log = new RequestLog();
         $client = self::client(self::ruleSet(['default' => 'block', 'rules' => [
             self::rule(['action' => 'log']),
-            self::rule(['host' => ['example.com'], 'action' => 'allow']),
+            self::rule(['if' => ['host' => ['example.com']], 'action' => 'allow']),
         ]]), log: $log);
 
         self::assertSame('ok', $client->request('GET', 'https://example.com/')->getContent());
@@ -194,8 +194,8 @@ final class FirewallHttpClientTest extends FirewallTestCase
             }
         };
         $client = self::client(self::ruleSet(['rules' => [
-            self::rule(['host' => ['logged.example.com'], 'action' => 'log']),
-            self::rule(['host' => ['blocked.example.com'], 'action' => 'block']),
+            self::rule(['if' => ['host' => ['logged.example.com']], 'action' => 'log']),
+            self::rule(['if' => ['host' => ['blocked.example.com']], 'action' => 'block']),
         ]]), logger: $logger);
 
         $client->request('GET', 'https://logged.example.com/path?secret=1')->getContent();
@@ -214,7 +214,7 @@ final class FirewallHttpClientTest extends FirewallTestCase
     {
         $log = new RequestLog();
         $client = self::client(self::ruleSet(['rules' => [
-            self::rule(['host' => ['nope.example.com'], 'action' => 'block']),
+            self::rule(['if' => ['host' => ['nope.example.com']], 'action' => 'block']),
             self::rule(['tag' => ['seen'], 'action' => 'log']),
         ]]), log: $log);
 

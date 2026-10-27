@@ -52,27 +52,42 @@ outgoing_firewall:
 
 Rules run top to bottom. The first rule that decides (`action: allow` or `action: block`) wins. When none does, `default` applies.
 
-| Key      | Meaning |
-|----------|---------|
-| `if`   | [Expression](https://symfony.com/doc/current/reference/formats/expression_language.html), the rule applies when it is truthy. A literal `%` must be written `%%`, as in any container parameter. |
-| `method`, `scheme`, `host`, `port`, `path` | Shorthand matchers, see below. |
-| `action` | `allow` or `block` decide the request. `log` flags it for the log and the profiler, then evaluation continues. |
-| `tag`    | A tag, or a list of tags, to put on the request. Rules further down see them as `tags.name` (or `tags['my-tag']`), which is `false` for any tag not set. |
-| `jump`   | A chain, or a list of chains, to evaluate. |
-| `phase`  | `request` (default) or `connect`, see below. |
+A rule has a condition, `if`, and effects. The condition says when the rule applies, the effects say what happens then:
 
-A rule needs at least one of `action`, `jump` or `tag`. When a rule matches, it first adds its tags, then runs its jumps, then applies its action.
+| Key      | Kind | Meaning |
+|----------|------|---------|
+| `if`     | condition | When the rule applies: an expression or a map of matchers, see below. Omit it to always apply. |
+| `action` | effect | `allow` or `block` decide the request. `log` flags it for the log and the profiler, then evaluation continues. |
+| `tag`    | effect | A tag, or a list of tags, to put on the request. |
+| `jump`   | effect | A chain, or a list of chains, to evaluate. |
+| `phase`  | | `request` (default) or `connect`, see below. |
 
-### Matcher shorthand
+A rule needs at least one effect. When a rule applies, it first adds its tags, then runs its jumps, then applies its action.
 
-For the common exact matches, skip the expression. These two rules are the same:
+### Conditions
+
+`if` is an [expression](https://symfony.com/doc/current/reference/formats/expression_language.html), or a map of matchers for the common exact matches. These two rules are the same:
 
 ```yaml
-- { host: foo.com, path: /bar, action: block }
+- { if: { host: foo.com, path: /bar }, action: block }
 - { if: "host == 'foo.com' and path == '/bar'", action: block }
 ```
 
-A list means "any of": `method: [POST, DELETE]` is `method in ['POST', 'DELETE']`. Matchers and `if` are combined with `and`, so `{ host: foo.com, if: "weekday == 'Sun'" }` needs both. Method, scheme and host are compared case-insensitively. The profiler shows the compiled expression.
+| Matcher | Matches |
+|---------|---------|
+| `method`, `scheme`, `host`, `port`, `path` | The variable of the same name, exactly |
+| `tags` | The request carries the tag, see `tag` above |
+| `expression` | An expression, to combine with the matchers above |
+
+All matchers in the map must hold. A list means "any of": `method: [POST, DELETE]` is `method in ['POST', 'DELETE']`, and `tags: [a, b]` needs one of the two tags. Method, scheme and host are compared case-insensitively. The profiler shows the compiled expression.
+
+```yaml
+# tag a request, then act on the tag further down
+- { if: { host: [api.example.com, billing.example.com] }, tag: external }
+- { if: { tags: external, expression: "weekday in ['Sat', 'Sun']" }, action: block }
+```
+
+In an expression, a tag is `tags.name` (or `tags['my-tag']`), which is `false` for any tag not set. A literal `%` in an expression must be written `%%`, as in any container parameter.
 
 ### Variables
 
@@ -150,7 +165,7 @@ monolog:
 A rule that only watches, without changing the outcome:
 
 ```yaml
-- { host: api.payments.example, action: log }
+- { if: { host: api.payments.example }, action: log }
 ```
 
 ## Profiler
