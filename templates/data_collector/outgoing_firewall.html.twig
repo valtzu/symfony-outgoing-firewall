@@ -1,0 +1,186 @@
+{% extends '@WebProfiler/Profiler/layout.html.twig' %}
+
+{% macro rule_table(rules, chain) %}
+    <table>
+        <thead>
+            <tr>
+                <th class="colored font-normal">#</th>
+                <th class="colored font-normal">When</th>
+                <th class="colored font-normal">Then</th>
+                <th class="colored font-normal">Phase</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rule in rules %}
+                <tr>
+                    <td>{{ loop.index0 }}</td>
+                    <td><code>{{ rule.when }}</code></td>
+                    <td>{{ rule.effect }}</td>
+                    <td>{{ rule.phase ?? 'request' }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endmacro %}
+
+{% block head %}
+    {{ parent() }}
+
+    <style>
+        .sf-profiler-outgoing-firewall .verdict { display: inline-block; min-width: 3.5em; margin-right: 6px; padding: 1px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; text-align: center; text-transform: uppercase; }
+        .sf-profiler-outgoing-firewall .verdict-allow { background: var(--color-success); color: #fff; }
+        .sf-profiler-outgoing-firewall .verdict-block { background: var(--color-error); color: #fff; }
+        .sf-profiler-outgoing-firewall .verdict-pending { background: var(--table-background); color: var(--color-muted); }
+        .sf-profiler-outgoing-firewall details summary { cursor: pointer; }
+        .sf-profiler-outgoing-firewall code { white-space: pre-wrap; word-break: break-all; }
+        .sf-profiler-outgoing-firewall tr.unmatched td { color: var(--gray-600); }
+        .sf-profiler-outgoing-firewall .request-url { font-family: var(--font-family-monospace); word-break: break-all; }
+        .sf-profiler-outgoing-firewall .tag { display: inline-block; margin-right: 4px; padding: 0 6px; border-radius: 4px; background: var(--table-background); }
+    </style>
+{% endblock %}
+
+{% block toolbar %}
+    {% if collector.requests %}
+        {% set status_color = collector.countBlocked ? 'red' : 'green' %}
+
+        {% set icon %}
+            <span class="sf-toolbar-icon">{{ source('@WebProfiler/Icon/http-client.svg') }}</span>
+            <span class="sf-toolbar-value">{{ collector.countBlocked ? collector.countBlocked ~ ' blocked' : collector.requests|length }}</span>
+        {% endset %}
+
+        {% set text %}
+            <div class="sf-toolbar-info-piece">
+                <b>Allowed</b>
+                <span class="sf-toolbar-status sf-toolbar-status-green">{{ collector.countAllowed }}</span>
+            </div>
+            <div class="sf-toolbar-info-piece">
+                <b>Blocked</b>
+                <span class="sf-toolbar-status {{ collector.countBlocked ? 'sf-toolbar-status-red' : '' }}">{{ collector.countBlocked }}</span>
+            </div>
+            <div class="sf-toolbar-info-piece">
+                <b>Default</b>
+                <span>{{ collector.default }}</span>
+            </div>
+        {% endset %}
+
+        {{ include('@WebProfiler/Profiler/toolbar_item.html.twig', {link: profiler_url, name: 'outgoing_firewall', status: status_color}) }}
+    {% endif %}
+{% endblock %}
+
+{% block menu %}
+    <span class="label {{ collector.requests ? (collector.countBlocked ? 'label-status-error' : '') : 'disabled' }}">
+        <span class="icon" aria-hidden="true">{{ source('@WebProfiler/Icon/http-client.svg') }}</span>
+        <strong>Outgoing Firewall</strong>
+        {% if collector.requests %}
+            <span class="count">{{ collector.requests|length }}</span>
+        {% endif %}
+    </span>
+{% endblock %}
+
+{% block panel %}
+    {% import _self as rules_view %}
+
+    <h2>Outgoing Firewall</h2>
+
+    <div class="sf-profiler-outgoing-firewall">
+        <div class="metrics">
+            <div class="metric">
+                <span class="value">{{ collector.requests|length }}</span>
+                <span class="label">Requests</span>
+            </div>
+            <div class="metric">
+                <span class="value">{{ collector.countAllowed }}</span>
+                <span class="label">Allowed</span>
+            </div>
+            <div class="metric">
+                <span class="value">{{ collector.countBlocked }}</span>
+                <span class="label">Blocked</span>
+            </div>
+            <div class="metric">
+                <span class="value">{{ collector.default }}</span>
+                <span class="label">Default</span>
+            </div>
+        </div>
+
+        <h3>Requests</h3>
+
+        {% if not collector.requests %}
+            <div class="empty empty-panel">
+                <p>No outgoing requests were made.</p>
+            </div>
+        {% endif %}
+
+        {% for request in collector.requests %}
+            <div>
+                <div>
+                    <h3>
+                        <span class="verdict verdict-{{ request.action ?? 'pending' }}">{{ request.action ?? 'pending' }}</span>
+                        {{ request.method }} <span class="request-url">{{ request.url }}</span>
+                    </h3>
+
+                    <div>
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <th class="font-normal" style="width: 140px">Decision</th>
+                                    <td>
+                                        {{ request.action ?? 'undecided' }}
+                                        {% if request.byDefault %}<em>(no rule decided, default applies)</em>{% elseif request.phase %}<em>(by a {{ request.phase }}-phase rule)</em>{% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="font-normal">Tags</th>
+                                    <td>{% for tag in request.tags %}<span class="tag">{{ tag }}</span>{% else %}<span class="text-muted">none</span>{% endfor %}</td>
+                                </tr>
+                                <tr>
+                                    <th class="font-normal">Variables</th>
+                                    <td><details><summary>Show</summary>{{ profiler_dump(request.variables) }}</details></td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h4>Evaluated rules</h4>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th class="colored font-normal">Phase</th>
+                                    <th class="colored font-normal">Chain</th>
+                                    <th class="colored font-normal">#</th>
+                                    <th class="colored font-normal">When</th>
+                                    <th class="colored font-normal">Matched</th>
+                                    <th class="colored font-normal">Then</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for step in request.steps %}
+                                    <tr class="{{ step.matched ? '' : 'unmatched' }}">
+                                        <td>{{ step.phase }}</td>
+                                        <td>{{ step.chain ?? '—' }}</td>
+                                        <td>{{ step.index }}</td>
+                                        <td><code>{{ step.when }}</code></td>
+                                        <td>{{ step.matched ? 'yes' : 'no' }}</td>
+                                        <td>{{ step.matched ? step.effect : '' }}</td>
+                                    </tr>
+                                {% else %}
+                                    <tr><td colspan="6" class="text-muted">No rule was evaluated.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+
+        <h3>Configured rules</h3>
+        {% if collector.rules %}
+            {{ rules_view.rule_table(collector.rules, null) }}
+        {% else %}
+            <div class="empty"><p>No top-level rules, every request gets the default ({{ collector.default }}).</p></div>
+        {% endif %}
+
+        {% for name, rules in collector.chains %}
+            <h4>Chain <code>{{ name }}</code></h4>
+            {{ rules_view.rule_table(rules, name) }}
+        {% endfor %}
+    </div>
+{% endblock %}

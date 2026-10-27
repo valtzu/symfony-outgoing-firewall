@@ -1,0 +1,37 @@
+{
+    "name": "valtzu/symfony-outgoing-firewall",
+    "description": "Rule-based firewall for outgoing Symfony HttpClient requests",
+    "type": "symfony-bundle",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Valtzu\\OutgoingFirewall\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Valtzu\\OutgoingFirewall\\Tests\\": "tests/"
+        }
+    },
+    "require": {
+        "php": ">=8.2",
+        "symfony/clock": "^6.4 || ^7.0 || ^8.0",
+        "symfony/config": "^6.4 || ^7.0 || ^8.0",
+        "symfony/dependency-injection": "^6.4 || ^7.0 || ^8.0",
+        "symfony/expression-language": "^6.4 || ^7.0 || ^8.0",
+        "symfony/http-client": "^6.4 || ^7.0 || ^8.0",
+        "symfony/http-client-contracts": "^3.4",
+        "symfony/http-foundation": "^6.4 || ^7.0 || ^8.0",
+        "symfony/http-kernel": "^6.4 || ^7.0 || ^8.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.5 || ^11.0 || ^12.0",
+        "symfony/framework-bundle": "^6.4 || ^7.0 || ^8.0",
+        "symfony/twig-bundle": "^6.4 || ^7.0 || ^8.0",
+        "symfony/web-profiler-bundle": "^6.4 || ^7.0 || ^8.0",
+        "symfony/yaml": "^6.4 || ^7.0 || ^8.0"
+    },
+    "suggest": {
+        "symfony/web-profiler-bundle": "To inspect outgoing requests and the rules that decided them in the profiler"
+    }
+}
