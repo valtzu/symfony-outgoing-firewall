@@ -106,6 +106,6 @@ final class BundleTest extends TestCase
 
         self::assertCount(1, $log->records());
         self::assertSame(1, $collector->countBlocked());
-        self::assertSame(0, $collector->countAllowed());
+        self::assertSame(0, $collector->countLogged());
     }
 }

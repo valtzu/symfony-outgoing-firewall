@@ -10,6 +10,7 @@ final class RequestRecord
 {
     public ?Action $action = null;
     public bool $decidedByDefault = false;
+    public bool $logged = false;
     public ?Phase $decidedIn = null;
 
     /** @var list<Step> */

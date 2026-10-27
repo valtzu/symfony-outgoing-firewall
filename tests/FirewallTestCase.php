@@ -3,6 +3,7 @@
 namespace Valtzu\OutgoingFirewall\Tests;
 
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -43,7 +44,7 @@ abstract class FirewallTestCase extends TestCase
         return ['phase' => $phase, 'rules' => array_map(self::rule(...), $rules)];
     }
 
-    protected static function client(RuleSet $ruleSet, ?HttpClientInterface $inner = null, string $now = '2026-10-28 12:00:00', ?RequestLog $log = null, array $defaultOptions = []): FirewallHttpClient
+    protected static function client(RuleSet $ruleSet, ?HttpClientInterface $inner = null, string $now = '2026-10-28 12:00:00', ?RequestLog $log = null, array $defaultOptions = [], ?LoggerInterface $logger = null): FirewallHttpClient
     {
         return new FirewallHttpClient(
             $inner ?? new MockHttpClient(static fn (): MockResponse => new MockResponse('ok')),
@@ -52,6 +53,7 @@ abstract class FirewallTestCase extends TestCase
             [],
             $log,
             $defaultOptions,
+            $logger,
         );
     }
 }

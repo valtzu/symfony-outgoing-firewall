@@ -90,7 +90,7 @@ final class ValtzuOutgoingFirewallBundle extends AbstractBundle
                     ->append($this->matcherNode('host'))
                     ->append($this->matcherNode('port'))
                     ->append($this->matcherNode('path'))
-                    ->enumNode('action')->values(['allow', 'block'])->defaultNull()->end()
+                    ->enumNode('action')->info('allow and block decide the request, log flags it for the log and the profiler and evaluation continues.')->values(['allow', 'block', 'log'])->defaultNull()->end()
                     ->arrayNode('jump')
                         ->beforeNormalization()->ifString()->then(static fn (string $chain): array => [$chain])->end()
                         ->scalarPrototype()->end()

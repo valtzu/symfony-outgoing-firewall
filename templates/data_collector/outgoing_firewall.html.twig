@@ -30,6 +30,7 @@
         .sf-profiler-outgoing-firewall .verdict { display: inline-block; min-width: 3.5em; margin-right: 6px; padding: 1px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; text-align: center; text-transform: uppercase; }
         .sf-profiler-outgoing-firewall .verdict-allow { background: var(--color-success); color: #fff; }
         .sf-profiler-outgoing-firewall .verdict-block { background: var(--color-error); color: #fff; }
+        .sf-profiler-outgoing-firewall .verdict-log { background: var(--color-warning, #b0413e); color: #fff; }
         .sf-profiler-outgoing-firewall .verdict-pending { background: var(--table-background); color: var(--color-muted); }
         .sf-profiler-outgoing-firewall details summary { cursor: pointer; }
         .sf-profiler-outgoing-firewall code { white-space: pre-wrap; word-break: break-all; }
@@ -41,21 +42,21 @@
 
 {% block toolbar %}
     {% if collector.requests %}
-        {% set status_color = collector.countBlocked ? 'red' : 'green' %}
+        {% set status_color = collector.countBlocked ? 'red' : 'yellow' %}
 
         {% set icon %}
             <span class="sf-toolbar-icon">{{ source('@WebProfiler/Icon/http-client.svg') }}</span>
-            <span class="sf-toolbar-value">{{ collector.countBlocked ? collector.countBlocked ~ ' blocked' : collector.requests|length }}</span>
+            <span class="sf-toolbar-value">{{ collector.countBlocked ? collector.countBlocked ~ ' blocked' : collector.countLogged ~ ' logged' }}</span>
         {% endset %}
 
         {% set text %}
             <div class="sf-toolbar-info-piece">
-                <b>Allowed</b>
-                <span class="sf-toolbar-status sf-toolbar-status-green">{{ collector.countAllowed }}</span>
-            </div>
-            <div class="sf-toolbar-info-piece">
                 <b>Blocked</b>
                 <span class="sf-toolbar-status {{ collector.countBlocked ? 'sf-toolbar-status-red' : '' }}">{{ collector.countBlocked }}</span>
+            </div>
+            <div class="sf-toolbar-info-piece">
+                <b>Logged</b>
+                <span class="sf-toolbar-status {{ collector.countLogged ? 'sf-toolbar-status-yellow' : '' }}">{{ collector.countLogged }}</span>
             </div>
             <div class="sf-toolbar-info-piece">
                 <b>Default</b>
@@ -86,15 +87,15 @@
         <div class="metrics">
             <div class="metric">
                 <span class="value">{{ collector.requests|length }}</span>
-                <span class="label">Requests</span>
-            </div>
-            <div class="metric">
-                <span class="value">{{ collector.countAllowed }}</span>
-                <span class="label">Allowed</span>
+                <span class="label">Collected</span>
             </div>
             <div class="metric">
                 <span class="value">{{ collector.countBlocked }}</span>
                 <span class="label">Blocked</span>
+            </div>
+            <div class="metric">
+                <span class="value">{{ collector.countLogged }}</span>
+                <span class="label">Logged</span>
             </div>
             <div class="metric">
                 <span class="value">{{ collector.default }}</span>
@@ -106,7 +107,7 @@
 
         {% if not collector.requests %}
             <div class="empty empty-panel">
-                <p>No outgoing requests were made.</p>
+                <p>No request was blocked or matched a <code>log</code> rule.</p>
             </div>
         {% endif %}
 
@@ -115,7 +116,7 @@
                 <div>
                     <h3>
                         <span class="verdict verdict-{{ request.action ?? 'pending' }}">{{ request.action ?? 'pending' }}</span>
-                        {{ request.method }} <span class="request-url">{{ request.url }}</span>
+                        {% if request.logged %}<span class="verdict verdict-log">log</span>{% endif %}{{ request.method }} <span class="request-url">{{ request.url }}</span>
                     </h3>
 
                     <div>

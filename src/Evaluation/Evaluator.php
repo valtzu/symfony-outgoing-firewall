@@ -56,7 +56,9 @@ final class Evaluator
                 }
             }
 
-            if (null !== $rule->action) {
+            if (Action::Log === $rule->action) {
+                $context->markLogged();
+            } elseif (null !== $rule->action) {
                 return $rule->action;
             }
         }

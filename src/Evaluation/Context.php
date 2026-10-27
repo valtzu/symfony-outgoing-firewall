@@ -7,6 +7,8 @@ final class Context
     /** @var array<string, true> */
     private array $tags = [];
 
+    private bool $logged = false;
+
     /**
      * @param array<string, mixed> $variables
      */
@@ -20,6 +22,16 @@ final class Context
     public function with(array $variables): void
     {
         $this->variables = $variables + $this->variables;
+    }
+
+    public function markLogged(): void
+    {
+        $this->logged = true;
+    }
+
+    public function isLogged(): bool
+    {
+        return $this->logged;
     }
 
     public function addTag(string $tag): void

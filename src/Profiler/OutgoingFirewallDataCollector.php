@@ -36,6 +36,7 @@ final class OutgoingFirewallDataCollector extends DataCollector implements LateD
                 'url' => $record->url,
                 'action' => $record->action?->value,
                 'byDefault' => $record->decidedByDefault,
+                'logged' => $record->logged,
                 'phase' => $record->decidedIn?->value,
                 'tags' => $record->tags,
                 'variables' => $this->cloneVar(array_diff_key($record->variables, ['now' => 0, 'url' => 0, 'method' => 0])),
@@ -79,9 +80,9 @@ final class OutgoingFirewallDataCollector extends DataCollector implements LateD
         return \count(array_filter($this->getRequests(), static fn (array $request): bool => Action::Block->value === $request['action']));
     }
 
-    public function countAllowed(): int
+    public function countLogged(): int
     {
-        return \count($this->getRequests()) - $this->countBlocked();
+        return \count(array_filter($this->getRequests(), static fn (array $request): bool => $request['logged']));
     }
 
     /**

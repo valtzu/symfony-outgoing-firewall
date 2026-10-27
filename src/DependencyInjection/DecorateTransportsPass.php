@@ -6,6 +6,7 @@ use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Argument\TaggedIteratorArgument;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
 use Valtzu\OutgoingFirewall\Evaluation\Evaluator;
@@ -41,7 +42,9 @@ final class DecorateTransportsPass implements CompilerPassInterface
                     '$variableProviders' => new TaggedIteratorArgument('outgoing_firewall.variable_provider'),
                     '$log' => $container->has(RequestLog::class) ? new Reference(RequestLog::class) : null,
                     '$defaultOptions' => $this->defaultOptionsOf($container->getDefinition($transportId)),
-                ]);
+                    '$logger' => new Reference('logger', ContainerInterface::IGNORE_ON_INVALID_REFERENCE),
+                ])
+                ->addTag('monolog.logger', ['channel' => 'outgoing_firewall']);
 
             $container->setDefinition($transportId.'.outgoing_firewall', $decorator);
         }

@@ -148,12 +148,74 @@ final class FirewallHttpClientTest extends FirewallTestCase
         self::assertContains(5, $seen);
     }
 
+    public function testRecordsOnlyBlockedAndLoggedRequests(): void
+    {
+        $log = new RequestLog();
+        $client = self::client(self::ruleSet(['rules' => [
+            self::rule(['host' => ['blocked.example.com'], 'action' => 'block']),
+            self::rule(['host' => ['logged.example.com'], 'action' => 'log']),
+        ]]), log: $log);
+
+        $client->request('GET', 'https://plain.example.com/')->getContent();
+        $client->request('GET', 'https://logged.example.com/')->getContent();
+        try {
+            $client->request('GET', 'https://blocked.example.com/');
+        } catch (RequestBlockedException) {
+        }
+
+        self::assertSame(['https://logged.example.com/', 'https://blocked.example.com/'], array_map(static fn ($record) => $record->url, $log->records()));
+    }
+
+    public function testLogRuleDoesNotDecideAndEvaluationContinues(): void
+    {
+        $log = new RequestLog();
+        $client = self::client(self::ruleSet(['default' => 'block', 'rules' => [
+            self::rule(['action' => 'log']),
+            self::rule(['host' => ['example.com'], 'action' => 'allow']),
+        ]]), log: $log);
+
+        self::assertSame('ok', $client->request('GET', 'https://example.com/')->getContent());
+
+        [$record] = $log->records();
+        self::assertTrue($record->logged);
+        self::assertSame(Action::Allow, $record->action);
+        self::assertCount(2, $record->steps);
+    }
+
+    public function testBlockedAndLoggedRequestsGoToTheLogger(): void
+    {
+        $logger = new class() extends \Psr\Log\AbstractLogger {
+            /** @var list<array{string, string, array<string, mixed>}> */
+            public array $records = [];
+
+            public function log($level, string|\Stringable $message, array $context = []): void
+            {
+                $this->records[] = [(string) $level, (string) $message, $context];
+            }
+        };
+        $client = self::client(self::ruleSet(['rules' => [
+            self::rule(['host' => ['logged.example.com'], 'action' => 'log']),
+            self::rule(['host' => ['blocked.example.com'], 'action' => 'block']),
+        ]]), logger: $logger);
+
+        $client->request('GET', 'https://logged.example.com/path?secret=1')->getContent();
+        $client->request('GET', 'https://plain.example.com/')->getContent();
+        try {
+            $client->request('GET', 'https://blocked.example.com/');
+        } catch (RequestBlockedException) {
+        }
+
+        self::assertSame(['info', 'warning'], array_column($logger->records, 0));
+        self::assertSame('https://logged.example.com/path', $logger->records[0][2]['url']);
+        self::assertStringContainsString('top-level rule #1', $logger->records[1][2]['reason']);
+    }
+
     public function testRecordsDecisionAndTrace(): void
     {
         $log = new RequestLog();
         $client = self::client(self::ruleSet(['rules' => [
-            self::rule(['if' => "host == 'nope.example.com'", 'action' => 'block']),
-            self::rule(['if' => 'true', 'tag' => ['seen']]),
+            self::rule(['host' => ['nope.example.com'], 'action' => 'block']),
+            self::rule(['tag' => ['seen'], 'action' => 'log']),
         ]]), log: $log);
 
         $client->request('GET', 'https://example.com/')->getContent();
@@ -166,5 +228,25 @@ final class FirewallHttpClientTest extends FirewallTestCase
         self::assertCount(2, $record->steps);
         self::assertFalse($record->steps[0]->matched);
         self::assertTrue($record->steps[1]->matched);
+    }
+
+    public function testConnectPhaseBlockIsRecorded(): void
+    {
+        $log = new RequestLog();
+        $inner = new MockHttpClient(static function (string $method, string $url, array $options): MockResponse {
+            $options['on_progress'](0, 0, ['primary_ip' => '10.1.2.3']);
+
+            return new MockResponse('ok');
+        });
+        $client = self::client(self::ruleSet(['rules' => [self::rule(['if' => "ip_in('10.0.0.0/8')", 'action' => 'block', 'phase' => 'connect'])]]), $inner, log: $log);
+
+        try {
+            $client->request('GET', 'https://example.com/')->getContent();
+            self::fail('Expected the connect phase to block.');
+        } catch (RequestBlockedException) {
+        }
+
+        self::assertCount(1, $log->records());
+        self::assertSame(Phase::Connect, $log->records()[0]->decidedIn);
     }
 }

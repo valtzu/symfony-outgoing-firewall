@@ -11,7 +11,9 @@ final class RequestLog implements ResetInterface
 
     public function add(RequestRecord $record): void
     {
-        $this->records[] = $record;
+        if (!\in_array($record, $this->records, true)) {
+            $this->records[] = $record;
+        }
     }
 
     /**

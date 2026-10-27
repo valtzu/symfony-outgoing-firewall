@@ -2,6 +2,7 @@
 
 namespace Valtzu\OutgoingFirewall\Http;
 
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\HttpClient\HttpClientTrait;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -36,6 +37,7 @@ final class FirewallHttpClient implements HttpClientInterface, ResetInterface
         private readonly iterable $variableProviders = [],
         private readonly ?RequestLog $log = null,
         array $defaultOptions = [],
+        private readonly ?LoggerInterface $logger = null,
     ) {
         $this->defaultOptions = self::mergeDefaultOptions($defaultOptions, [], true);
     }
@@ -48,13 +50,12 @@ final class FirewallHttpClient implements HttpClientInterface, ResetInterface
         $context = new Context($this->createVariables($method, $fullUrl, $prepared['normalized_headers']));
         $trace = new Trace();
         $record = new RequestRecord($method, $fullUrl);
-        $this->log?->add($record);
-
         $action = $this->evaluator->evaluate(Phase::Request, $context, $trace);
         $ruleSet = $this->evaluator->ruleSet();
         $awaitsConnect = null === $action && $ruleSet->hasConnectRules();
 
         $this->conclude($record, $trace, $context, $action, Phase::Request, !$awaitsConnect);
+        $this->remember($record, $context);
         $this->assertAllowed($record, $method, $fullUrl);
 
         if ($awaitsConnect) {
@@ -98,6 +99,7 @@ final class FirewallHttpClient implements HttpClientInterface, ResetInterface
                 $trace = new Trace();
                 $action = $this->evaluator->evaluate(Phase::Connect, $context, $trace);
                 $this->conclude($record, $trace, $context, $action, Phase::Connect, true);
+                $this->remember($record, $context);
                 $this->assertAllowed($record, $method, $url);
             }
 
@@ -122,6 +124,32 @@ final class FirewallHttpClient implements HttpClientInterface, ResetInterface
         $record->action = $action ?? $this->evaluator->ruleSet()->default;
     }
 
+    private function remember(RequestRecord $record, Context $context): void
+    {
+        $newlyLogged = $context->isLogged() && !$record->logged;
+        $record->logged = $context->isLogged();
+
+        if (Action::Block === $record->action || $record->logged) {
+            $this->log?->add($record);
+        }
+
+        if ($newlyLogged) {
+            $this->logger?->info('Outgoing request matched a log rule.', $this->describe($record));
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function describe(RequestRecord $record): array
+    {
+        return [
+            'method' => $record->method,
+            'url' => preg_replace('/\?.*/', '', $record->url),
+            'tags' => $record->tags,
+        ];
+    }
+
     private function assertAllowed(RequestRecord $record, string $method, string $url): void
     {
         if (Action::Block !== $record->action) {
@@ -129,9 +157,13 @@ final class FirewallHttpClient implements HttpClientInterface, ResetInterface
         }
 
         $step = [] === $record->steps ? null : $record->steps[array_key_last($record->steps)];
-        throw new RequestBlockedException($method, $url, $record->decidedByDefault || null === $step
-            ? 'no rule matched, default is block'
-            : \sprintf('%s rule #%d: %s', $step->chain ?? 'top-level', $step->index, $step->if));
+        $reason = $record->decidedByDefault || null === $step
+            ? 'no rule decided, default is block'
+            : \sprintf('%s rule #%d: %s', $step->chain ?? 'top-level', $step->index, $step->if);
+
+        $this->logger?->warning('Outgoing request blocked by the firewall.', $this->describe($record) + ['reason' => $reason]);
+
+        throw new RequestBlockedException($method, $url, $reason);
     }
 
     /**

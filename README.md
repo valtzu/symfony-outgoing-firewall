@@ -56,7 +56,7 @@ Rules run top to bottom. The first rule that decides (`action: allow` or `action
 |----------|---------|
 | `if`   | [Expression](https://symfony.com/doc/current/reference/formats/expression_language.html), the rule applies when it is truthy. A literal `%` must be written `%%`, as in any container parameter. |
 | `method`, `scheme`, `host`, `port`, `path` | Shorthand matchers, see below. |
-| `action` | `allow` or `block`. Decides the request. |
+| `action` | `allow` or `block` decide the request. `log` flags it for the log and the profiler, then evaluation continues. |
 | `tag`    | A tag, or a list of tags, to put on the request. Rules further down see them as `tags.name` (or `tags['my-tag']`), which is `false` for any tag not set. |
 | `jump`   | A chain, or a list of chains, to evaluate. |
 | `phase`  | `request` (default) or `connect`, see below. |
@@ -132,9 +132,30 @@ Things to know:
 - `connect_time` is reported by the curl transport only. With the native transport it stays `null`.
 - If the transport never reports a peer IP (`MockHttpClient` for instance), connect rules never run. That includes `default: block`.
 
+## Logging
+
+Blocked requests are logged at `warning`, and requests that matched an `action: log` rule at `info`. Both go to the `outgoing_firewall` channel, with the method, the URL without its query string, the tags and, for blocks, the rule that decided. Allowed requests are not logged unless a rule says `log`, so this is cheap to leave on in production.
+
+```yaml
+# config/packages/monolog.yaml
+monolog:
+    handlers:
+        outgoing_firewall:
+            type: stream
+            path: '%kernel.logs_dir%/outgoing_firewall.log'
+            level: info
+            channels: [outgoing_firewall]
+```
+
+A rule that only watches, without changing the outcome:
+
+```yaml
+- { host: api.payments.example, action: log }
+```
+
 ## Profiler
 
-With `symfony/web-profiler-bundle` and `kernel.debug`, the toolbar shows how many requests were blocked, and the panel shows every outgoing request, the rules evaluated for it, which ones matched, the tags it collected, and its variables.
+With `symfony/web-profiler-bundle` and `kernel.debug`, the toolbar shows how many requests were blocked or logged. The panel lists those requests, the rules evaluated for each, which ones matched, the tags collected and the variables. Allowed requests are left out, to keep the panel readable. Add `action: log` to a rule to see its requests here as well.
 
 ![Toolbar](docs/toolbar.png)
 
