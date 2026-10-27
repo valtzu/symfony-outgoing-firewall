@@ -22,12 +22,6 @@ final class FirewallExpressionLanguage extends ExpressionLanguage
         );
 
         $this->register(
-            'tagged',
-            static fn (string $tag): string => \sprintf('\in_array(%s, $values["tags"], true)', $tag),
-            static fn (array $values, string $tag): bool => \in_array($tag, $values['tags'], true),
-        );
-
-        $this->register(
             'ip_in',
             static fn (string $ranges): string => \sprintf('(null !== $values["ip"] && \Symfony\Component\HttpFoundation\IpUtils::checkIp($values["ip"], %s))', $ranges),
             static fn (array $values, string|array $ranges): bool => \is_string($values['ip'] ?? null) && IpUtils::checkIp($values['ip'], $ranges),

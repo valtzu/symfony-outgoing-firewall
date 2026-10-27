@@ -40,7 +40,7 @@ final class BundleTest extends TestCase
             ],
             'rules' => [
                 ['when' => "host == 'example.com'", 'tag' => 'known', 'jump' => 'no_post'],
-                ['when' => "tagged('known')", 'action' => 'allow'],
+                ['when' => "tags.known", 'action' => 'allow'],
             ],
         ]);
         $kernel->boot();

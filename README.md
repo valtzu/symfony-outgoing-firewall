@@ -14,7 +14,7 @@ outgoing_firewall:
     rules:
         - { when: "host ends with '.example.com'", tag: external, jump: require_ua }
         - { when: "host == 'billing.example.com'", jump: weekdays_only }
-        - { when: "tagged('external') and method != 'GET'", action: block }
+        - { when: "tags.external and method != 'GET'", action: block }
         - { when: "ip_in(['10.0.0.0/8', '192.168.0.0/16'])", action: block, phase: connect }
 ```
 
@@ -56,7 +56,7 @@ Rules run top to bottom. The first rule that decides (`action: allow` or `action
 |----------|---------|
 | `when`   | [Expression](https://symfony.com/doc/current/reference/formats/expression_language.html), the rule applies when it is truthy. Defaults to `true`. A literal `%` must be written `%%`, as in any container parameter. |
 | `action` | `allow` or `block`. Decides the request. |
-| `tag`    | A tag, or a list of tags, to put on the request. Rules further down see them with `tagged('name')`. |
+| `tag`    | A tag, or a list of tags, to put on the request. Rules further down see them as `tags.name` (or `tags['my-tag']`), which is `false` for any tag not set. |
 | `jump`   | A chain, or a list of chains, to evaluate. |
 | `phase`  | `request` (default) or `connect`, see below. |
 
@@ -68,6 +68,7 @@ A rule needs at least one of `action`, `jump` or `tag`. When a rule matches, it 
 |------|-------|
 | `method`, `url` | Method and the full resolved URL |
 | `scheme`, `host`, `port`, `path`, `query` | Parts of the resolved URL. `host` is lowercase. |
+| `tags` | Tags set by earlier rules: `tags.name` is `true` or `false` |
 | `headers` | Lowercase header name to list of values. Includes headers from `default_options`, scoped clients and `withOptions()`. |
 | `now`, `weekday`, `hour` | Current time (from the `clock` service), `Mon`..`Sun`, `0`..`23` |
 | `ip`, `connect_time` | Peer IP and connect time in seconds, `null` until the connection is made (connect phase) |
@@ -77,7 +78,6 @@ A rule needs at least one of `action`, `jump` or `tag`. When a rule matches, it 
 | Name | Value |
 |------|-------|
 | `header('name')` | Header value (several values joined with `, `), or `null` when absent |
-| `tagged('name')` | Whether an earlier rule tagged the request |
 | `ip_in(ranges)` | Whether `ip` is in a CIDR range or a list of them |
 
 Everything else from Symfony's ExpressionLanguage is available (`matches`, `in`, `starts with`, `ends with`, `contains`, `now.format('H')`, ...).

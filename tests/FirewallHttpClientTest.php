@@ -96,7 +96,7 @@ final class FirewallHttpClientTest extends FirewallTestCase
     {
         $client = self::client(self::ruleSet(['rules' => [
             self::rule(['when' => "host ends with '.example.com'", 'tag' => ['external']]),
-            self::rule(['when' => "tagged('external') and method != 'GET'", 'action' => 'block']),
+            self::rule(['when' => "tags.external and method != 'GET'", 'action' => 'block']),
         ]]));
 
         self::assertSame('ok', $client->request('GET', 'https://a.example.com/')->getContent());
@@ -104,6 +104,17 @@ final class FirewallHttpClientTest extends FirewallTestCase
 
         $this->expectException(RequestBlockedException::class);
         $client->request('POST', 'https://a.example.com/');
+    }
+
+    public function testTagsWithSpecialCharactersAreReadWithBrackets(): void
+    {
+        $client = self::client(self::ruleSet(['rules' => [
+            self::rule(['tag' => ['pre-prod']]),
+            self::rule(['when' => "tags['pre-prod'] and not tags.never_set", 'action' => 'block']),
+        ]]));
+
+        $this->expectException(RequestBlockedException::class);
+        $client->request('GET', 'https://example.com/');
     }
 
     public function testConnectPhaseBlocksOnceThePeerIpIsKnown(): void

@@ -48,6 +48,6 @@ final class Context
      */
     public function expressionValues(): array
     {
-        return $this->variables + ['tags' => $this->tags()];
+        return $this->variables + ['tags' => new TagSet($this->tags())];
     }
 }
