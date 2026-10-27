@@ -4,14 +4,20 @@ on: [push, pull_request]
 
 jobs:
   test:
+    name: test (PHP ${{ matrix.php }}, Symfony ${{ matrix.symfony }})
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        php: ['8.2', '8.4']
+        php: ['8.4', '8.5']
+        symfony: ['6.4', '7.4', 'latest']
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-      - run: composer install --no-progress
+      - name: Pin Symfony
+        if: matrix.symfony != 'latest'
+        run: sed -i 's/"^6.4 || ^7.0 || ^8.0"/"${{ matrix.symfony }}.*"/' composer.json
+      - run: composer update --no-progress
       - run: vendor/bin/phpunit

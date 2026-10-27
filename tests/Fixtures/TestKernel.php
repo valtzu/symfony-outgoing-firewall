@@ -5,7 +5,11 @@ namespace Valtzu\OutgoingFirewall\Tests\Fixtures;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
 use Symfony\Component\Config\Loader\LoaderInterface;
+use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
+use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Reference;
+use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpKernel\Kernel;
 use Valtzu\OutgoingFirewall\ValtzuOutgoingFirewallBundle;
 
@@ -29,7 +33,25 @@ final class TestKernel extends Kernel
 
     public function getCacheDir(): string
     {
-        return sys_get_temp_dir().'/outgoing-firewall-tests/'.md5(serialize([$this->firewall, $this->mockTransport]));
+        return sys_get_temp_dir().'/outgoing-firewall-tests/'.md5(serialize([$this->firewall, $this->mockTransport, Kernel::VERSION]));
+    }
+
+    protected function build(ContainerBuilder $container): void
+    {
+        if (!$this->mockTransport) {
+            return;
+        }
+
+        $container->addCompilerPass(new class() implements CompilerPassInterface {
+            public function process(ContainerBuilder $container): void
+            {
+                $container->getDefinition('http_client.transport')
+                    ->setClass(MockHttpClient::class)
+                    ->setFactory(null)
+                    ->setMethodCalls([])
+                    ->setArguments([new Reference(MockResponseFactory::class)]);
+            }
+        }, PassConfig::TYPE_BEFORE_OPTIMIZATION, 0);
     }
 
     protected function configureContainer(\Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator $container): void
@@ -39,14 +61,13 @@ final class TestKernel extends Kernel
             'test' => true,
             'http_client' => [
                 'default_options' => ['headers' => ['X-Default' => 'yes']],
-                ...($this->mockTransport ? ['mock_response_factory' => MockResponseFactory::class] : []),
                 'scoped_clients' => [
                     'github.client' => ['base_uri' => 'https://api.github.com', 'headers' => ['User-Agent' => 'foobar']],
                     'plain.client' => ['base_uri' => 'https://example.com'],
                 ],
             ],
         ]);
-        $container->extension('outgoing_firewall', $this->firewall + ['transports' => [$this->mockTransport ? '.http_client.mock_transport.'.MockResponseFactory::class : 'http_client.transport']]);
+        $container->extension('outgoing_firewall', $this->firewall);
         $container->services()->set(MockResponseFactory::class);
         $container->services()
             ->set(RegionProvider::class)
