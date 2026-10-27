@@ -96,6 +96,27 @@ final class BundleTest extends TestCase
         (new TestKernel(['rules' => [['jump' => 'missing']]]))->boot();
     }
 
+    /**
+     * @return iterable<string, array{mixed, string}>
+     */
+    public static function invalidConditions(): iterable
+    {
+        yield 'matchers and expression mixed' => [['host' => 'a.test', 'expression' => 'true'], 'Unknown matcher "expression"'];
+        yield 'unknown matcher' => [['hostname' => 'a.test'], 'Unknown matcher "hostname"'];
+        yield 'empty map' => [[], 'expression string or a map of matchers'];
+        yield 'list' => [['a.test'], 'expression string or a map of matchers'];
+        yield 'nested value' => [['host' => [['a.test']]], 'Matcher "host" takes a value or a list of values'];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('invalidConditions')]
+    public function testInvalidConditionIsRejectedAtBuildTime(mixed $condition, string $message): void
+    {
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessage($message);
+
+        (new TestKernel(['rules' => [['if' => $condition, 'action' => 'block']]]))->boot();
+    }
+
     public function testRuleNeedsAnEffect(): void
     {
         $this->expectException(InvalidConfigurationException::class);

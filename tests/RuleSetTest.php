@@ -50,15 +50,14 @@ final class RuleSetTest extends FirewallTestCase
     public static function conditions(): iterable
     {
         yield 'none' => [null, 'true'];
-        yield 'expression string' => ['hour < 6', 'hour < 6'];
+        yield 'expression string is left alone' => ["weekday in ['Sat', 'Sun'] or hour < 6", "weekday in ['Sat', 'Sun'] or hour < 6"];
         yield 'host and path' => [['host' => ['Foo.com'], 'path' => ['/bar']], "host == 'foo.com' and path == '/bar'"];
         yield 'list' => [['method' => ['get', 'head']], "method in ['GET', 'HEAD']"];
         yield 'port is an int' => [['port' => ['8080']], 'port == 8080'];
         yield 'quotes are escaped' => [['path' => ["/it's"]], "path == '/it\\'s'"];
         yield 'tag' => [['tags' => ['external']], 'tags.external'];
         yield 'any of several tags' => [['tags' => ['a', 'pre-prod']], "(tags.a or tags['pre-prod'])"];
-        yield 'matchers and expression' => [['host' => ['foo.com'], 'expression' => "weekday == 'Sun' or hour < 6"], "host == 'foo.com' and (weekday == 'Sun' or hour < 6)"];
-        yield 'expression alone is untouched' => [['expression' => 'hour < 6'], 'hour < 6'];
+        yield 'scalar matcher values' => [['host' => 'foo.com', 'method' => 'post', 'tags' => 'external'], "host == 'foo.com' and method == 'POST' and tags.external"];
     }
 
     /**

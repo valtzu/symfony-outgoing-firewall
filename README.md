@@ -66,7 +66,7 @@ A rule needs at least one effect. When a rule applies, it first adds its tags, t
 
 ### Conditions
 
-`if` is an [expression](https://symfony.com/doc/current/reference/formats/expression_language.html), or a map of matchers for the common exact matches. These two rules are the same:
+`if` is one or the other: an [expression](https://symfony.com/doc/current/reference/formats/expression_language.html), or a map of matchers for the common exact matches. They cannot be mixed in one rule. These two rules are the same:
 
 ```yaml
 - { if: { host: foo.com, path: /bar }, action: block }
@@ -77,14 +77,15 @@ A rule needs at least one effect. When a rule applies, it first adds its tags, t
 |---------|---------|
 | `method`, `scheme`, `host`, `port`, `path` | The variable of the same name, exactly |
 | `tags` | The request carries the tag, see `tag` above |
-| `expression` | An expression, to combine with the matchers above |
 
-All matchers in the map must hold. A list means "any of": `method: [POST, DELETE]` is `method in ['POST', 'DELETE']`, and `tags: [a, b]` needs one of the two tags. Method, scheme and host are compared case-insensitively. The profiler shows the compiled expression.
+All matchers in the map must hold. A list means "any of": `method: [POST, DELETE]` is `method in ['POST', 'DELETE']`, and `tags: [a, b]` needs one of the two tags. Method, scheme and host are compared case-insensitively. The profiler shows the compiled expression. An unknown matcher fails when the container is built.
+
+Anything the matchers cannot say needs an expression:
 
 ```yaml
 # tag a request, then act on the tag further down
 - { if: { host: [api.example.com, billing.example.com] }, tag: external }
-- { if: { tags: external, expression: "weekday in ['Sat', 'Sun']" }, action: block }
+- { if: "tags.external and weekday in ['Sat', 'Sun']", action: block }
 ```
 
 In an expression, a tag is `tags.name` (or `tags['my-tag']`), which is `false` for any tag not set. A literal `%` in an expression must be written `%%`, as in any container parameter.

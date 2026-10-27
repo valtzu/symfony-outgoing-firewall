@@ -3,6 +3,7 @@
 namespace Valtzu\OutgoingFirewall;
 
 use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
+use Symfony\Component\Config\Definition\Builder\VariableNodeDefinition;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -101,32 +102,37 @@ final class ValtzuOutgoingFirewallBundle extends AbstractBundle
         return $rules;
     }
 
-    private function conditionNode(): ArrayNodeDefinition
+    private function conditionNode(): VariableNodeDefinition
     {
-        $node = new ArrayNodeDefinition('if');
+        $node = new VariableNodeDefinition('if');
         $node
-            ->info('When the rule applies. An expression, or a map of matchers that must all hold.')
-            ->beforeNormalization()->ifString()->then(static fn (string $expression): array => ['expression' => $expression])->end()
-            ->children()
-                ->scalarNode('expression')->info('Expression, truthy when the rule applies.')->defaultNull()->end()
-                ->append($this->matcherNode('method'))
-                ->append($this->matcherNode('scheme'))
-                ->append($this->matcherNode('host'))
-                ->append($this->matcherNode('port'))
-                ->append($this->matcherNode('path'))
-                ->append($this->matcherNode('tags'))
+            ->info('When the rule applies: an expression string, or a map of matchers that must all hold. Not both.')
+            ->defaultNull()
+            ->validate()
+                ->always(static function (mixed $condition): string|array|null {
+                    if (null === $condition || (\is_string($condition) && '' !== $condition)) {
+                        return $condition;
+                    }
+
+                    if (!\is_array($condition) || [] === $condition || array_is_list($condition)) {
+                        throw new \InvalidArgumentException('Must be an expression string or a map of matchers.');
+                    }
+
+                    if ([] !== $unknown = array_diff(array_keys($condition), RuleSet::MATCHERS)) {
+                        throw new \InvalidArgumentException(\sprintf('Unknown matcher "%s", expected one of "%s". Use an expression string for anything else.', implode('", "', $unknown), implode('", "', RuleSet::MATCHERS)));
+                    }
+
+                    foreach ($condition as $name => $values) {
+                        foreach ((array) $values as $value) {
+                            if (!\is_scalar($value)) {
+                                throw new \InvalidArgumentException(\sprintf('Matcher "%s" takes a value or a list of values.', $name));
+                            }
+                        }
+                    }
+
+                    return $condition;
+                })
             ->end();
-
-        return $node;
-    }
-
-    private function matcherNode(string $name): ArrayNodeDefinition
-    {
-        $node = new ArrayNodeDefinition($name);
-        $node
-            ->info(\sprintf('Matches when %s equals the value, or any of the values given a list.', $name))
-            ->beforeNormalization()->ifTrue(static fn (mixed $value): bool => !\is_array($value))->then(static fn (mixed $value): array => [$value])->end()
-            ->scalarPrototype()->end();
 
         return $node;
     }

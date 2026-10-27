@@ -6,7 +6,7 @@ use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 
 final readonly class RuleSet
 {
-    private const MATCHERS = ['method', 'scheme', 'host', 'port', 'path'];
+    public const MATCHERS = ['method', 'scheme', 'host', 'port', 'path', 'tags'];
 
     /**
      * @param list<Rule>                $rules
@@ -76,30 +76,42 @@ final readonly class RuleSet
     private static function compileWhen(array $rule): string
     {
         $condition = $rule['if'] ?? null;
-        if (!\is_array($condition)) {
-            $condition = ['expression' => $condition];
+
+        if (null === $condition) {
+            return 'true';
+        }
+
+        if (\is_string($condition)) {
+            return $condition;
         }
 
         $conditions = [];
-        foreach (self::MATCHERS as $variable) {
-            if ([] === ($values = $condition[$variable] ?? [])) {
-                continue;
-            }
-
-            $literals = array_map(static fn (mixed $value): string => self::literal(self::normalizeMatcherValue($variable, $value)), $values);
-            $conditions[] = 1 === \count($literals) ? \sprintf('%s == %s', $variable, $literals[0]) : \sprintf('%s in [%s]', $variable, implode(', ', $literals));
+        foreach ($condition as $name => $values) {
+            $values = (array) $values;
+            $conditions[] = 'tags' === $name ? self::compileTags($values) : self::compileMatcher($name, $values);
         }
 
-        if ([] !== ($tags = $condition['tags'] ?? [])) {
-            $reads = array_map(static fn (string $tag): string => 1 === preg_match('/^[A-Za-z_]\w*$/', $tag) ? 'tags.'.$tag : 'tags['.self::literal($tag).']', $tags);
-            $conditions[] = 1 === \count($reads) ? $reads[0] : '('.implode(' or ', $reads).')';
-        }
+        return implode(' and ', $conditions);
+    }
 
-        if (null !== ($expression = $condition['expression'] ?? null)) {
-            $conditions[] = [] === $conditions ? $expression : '('.$expression.')';
-        }
+    /**
+     * @param list<string|int|float|bool> $values
+     */
+    private static function compileMatcher(string $variable, array $values): string
+    {
+        $literals = array_map(static fn (mixed $value): string => self::literal(self::normalizeMatcherValue($variable, $value)), $values);
 
-        return [] === $conditions ? 'true' : implode(' and ', $conditions);
+        return 1 === \count($literals) ? \sprintf('%s == %s', $variable, $literals[0]) : \sprintf('%s in [%s]', $variable, implode(', ', $literals));
+    }
+
+    /**
+     * @param list<string|int|float|bool> $tags
+     */
+    private static function compileTags(array $tags): string
+    {
+        $reads = array_map(static fn (mixed $tag): string => 1 === preg_match('/^[A-Za-z_]\w*$/', (string) $tag) ? 'tags.'.$tag : 'tags['.self::literal((string) $tag).']', $tags);
+
+        return 1 === \count($reads) ? $reads[0] : '('.implode(' or ', $reads).')';
     }
 
     private static function normalizeMatcherValue(string $variable, string|int|float|bool $value): string|int
