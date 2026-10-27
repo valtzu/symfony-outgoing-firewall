@@ -195,6 +195,8 @@ final class DeploymentVariables implements VariableProviderInterface
 - { if: "env != 'prod' and host == 'api.payments.example'", action: block }
 ```
 
+Custom variables are available in expressions only. The map form of `if` knows just the built-in matchers.
+
 Add functions with Symfony's `ExpressionFunctionProviderInterface`, tagged `outgoing_firewall.expression_function_provider`.
 
 ## Testing
