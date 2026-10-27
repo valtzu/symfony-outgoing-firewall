@@ -8,14 +8,14 @@ outgoing_firewall:
     default: allow
     chains:
         require_ua:
-            - { when: "headers['user-agent'] != 'my-app/1.0'", action: block }
+            - { if: "headers['user-agent'] != 'my-app/1.0'", action: block }
         weekdays_only:
-            - { when: "weekday in ['Sat', 'Sun']", action: block }
+            - { if: "weekday in ['Sat', 'Sun']", action: block }
     rules:
-        - { when: "host ends with '.example.com'", tag: external, jump: require_ua }
-        - { when: "host == 'billing.example.com'", jump: weekdays_only }
-        - { when: "tags.external and method != 'GET'", action: block }
-        - { when: "ip_in(['10.0.0.0/8', '192.168.0.0/16'])", action: block, phase: connect }
+        - { if: "host ends with '.example.com'", tag: external, jump: require_ua }
+        - { if: "host == 'billing.example.com'", jump: weekdays_only }
+        - { if: "tags.external and method != 'GET'", action: block }
+        - { if: "ip_in(['10.0.0.0/8', '192.168.0.0/16'])", action: block, phase: connect }
 ```
 
 A blocked request throws `Valtzu\OutgoingFirewall\Http\RequestBlockedException` (a `TransportExceptionInterface`) naming the rule that blocked it.
@@ -54,7 +54,7 @@ Rules run top to bottom. The first rule that decides (`action: allow` or `action
 
 | Key      | Meaning |
 |----------|---------|
-| `when`   | [Expression](https://symfony.com/doc/current/reference/formats/expression_language.html), the rule applies when it is truthy. A literal `%` must be written `%%`, as in any container parameter. |
+| `if`   | [Expression](https://symfony.com/doc/current/reference/formats/expression_language.html), the rule applies when it is truthy. A literal `%` must be written `%%`, as in any container parameter. |
 | `method`, `scheme`, `host`, `port`, `path` | Shorthand matchers, see below. |
 | `action` | `allow` or `block`. Decides the request. |
 | `tag`    | A tag, or a list of tags, to put on the request. Rules further down see them as `tags.name` (or `tags['my-tag']`), which is `false` for any tag not set. |
@@ -69,10 +69,10 @@ For the common exact matches, skip the expression. These two rules are the same:
 
 ```yaml
 - { host: foo.com, path: /bar, action: block }
-- { when: "host == 'foo.com' and path == '/bar'", action: block }
+- { if: "host == 'foo.com' and path == '/bar'", action: block }
 ```
 
-A list means "any of": `method: [POST, DELETE]` is `method in ['POST', 'DELETE']`. Matchers and `when` are combined with `and`, so `{ host: foo.com, when: "weekday == 'Sun'" }` needs both. Method, scheme and host are compared case-insensitively. The profiler shows the compiled expression.
+A list means "any of": `method: [POST, DELETE]` is `method in ['POST', 'DELETE']`. Matchers and `if` are combined with `and`, so `{ host: foo.com, if: "weekday == 'Sun'" }` needs both. Method, scheme and host are compared case-insensitively. The profiler shows the compiled expression.
 
 ### Variables
 
@@ -101,11 +101,11 @@ A chain is a named list of rules, so that several hosts can share one set withou
 outgoing_firewall:
     chains:
         business_hours:
-            - { when: "weekday in ['Sat', 'Sun']", action: block }
-            - { when: "hour < 8 or hour >= 18", action: block }
+            - { if: "weekday in ['Sat', 'Sun']", action: block }
+            - { if: "hour < 8 or hour >= 18", action: block }
     rules:
-        - { when: "host == 'api.example.com'", jump: [business_hours] }
-        - { when: "host == 'billing.example.com'", jump: [business_hours] }
+        - { if: "host == 'api.example.com'", jump: [business_hours] }
+        - { if: "host == 'billing.example.com'", jump: [business_hours] }
 ```
 
 A chain can also be written with a `phase` that all its rules inherit:
@@ -115,7 +115,7 @@ chains:
     no_private_ips:
         phase: connect
         rules:
-            - { when: "ip_in('10.0.0.0/8')", action: block }
+            - { if: "ip_in('10.0.0.0/8')", action: block }
 ```
 
 ## Phases
@@ -155,7 +155,7 @@ final class DeploymentVariables implements VariableProviderInterface
 ```
 
 ```yaml
-- { when: "env != 'prod' and host == 'api.payments.example'", action: block }
+- { if: "env != 'prod' and host == 'api.payments.example'", action: block }
 ```
 
 Add functions with Symfony's `ExpressionFunctionProviderInterface`, tagged `outgoing_firewall.expression_function_provider`.

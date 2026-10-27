@@ -27,8 +27,8 @@ final class FirewallHttpClientTest extends FirewallTestCase
     public function testFirstMatchingRuleWins(): void
     {
         $client = self::client(self::ruleSet(['default' => 'block', 'rules' => [
-            self::rule(['when' => "host == 'api.example.com'", 'action' => 'allow']),
-            self::rule(['when' => "host ends with '.example.com'", 'action' => 'block']),
+            self::rule(['if' => "host == 'api.example.com'", 'action' => 'allow']),
+            self::rule(['if' => "host ends with '.example.com'", 'action' => 'block']),
         ]]));
 
         self::assertSame('ok', $client->request('GET', 'https://api.example.com/')->getContent());
@@ -39,7 +39,7 @@ final class FirewallHttpClientTest extends FirewallTestCase
 
     public function testRequiredHeaderValue(): void
     {
-        $client = self::client(self::ruleSet(['rules' => [self::rule(['when' => "headers['User-Agent'] != 'foobar'", 'action' => 'block'])]]));
+        $client = self::client(self::ruleSet(['rules' => [self::rule(['if' => "headers['User-Agent'] != 'foobar'", 'action' => 'block'])]]));
 
         self::assertSame('ok', $client->request('GET', 'https://example.com/', ['headers' => ['User-Agent' => 'foobar']])->getContent());
 
@@ -49,7 +49,7 @@ final class FirewallHttpClientTest extends FirewallTestCase
 
     public function testHeadersSetThroughWithOptionsAndDefaultOptionsAreSeen(): void
     {
-        $ruleSet = self::ruleSet(['rules' => [self::rule(['when' => "headers['x-env'] != 'staging'", 'action' => 'block'])]]);
+        $ruleSet = self::ruleSet(['rules' => [self::rule(['if' => "headers['x-env'] != 'staging'", 'action' => 'block'])]]);
 
         self::assertSame('ok', self::client($ruleSet, defaultOptions: ['headers' => ['X-Env' => 'staging']])->request('GET', 'https://example.com/')->getContent());
         self::assertSame('ok', self::client($ruleSet)->withOptions(['headers' => ['X-Env' => 'staging']])->request('GET', 'https://example.com/')->getContent());
@@ -57,7 +57,7 @@ final class FirewallHttpClientTest extends FirewallTestCase
 
     public function testRelativeUrlResolvesAgainstBaseUri(): void
     {
-        $client = self::client(self::ruleSet(['rules' => [self::rule(['when' => "host == 'api.example.com'", 'action' => 'block'])]]))
+        $client = self::client(self::ruleSet(['rules' => [self::rule(['if' => "host == 'api.example.com'", 'action' => 'block'])]]))
             ->withOptions(['base_uri' => 'https://api.example.com']);
 
         $this->expectException(RequestBlockedException::class);
@@ -66,7 +66,7 @@ final class FirewallHttpClientTest extends FirewallTestCase
 
     public function testWeekday(): void
     {
-        $ruleSet = self::ruleSet(['rules' => [self::rule(['when' => "weekday in ['Sat', 'Sun']", 'action' => 'block'])]]);
+        $ruleSet = self::ruleSet(['rules' => [self::rule(['if' => "weekday in ['Sat', 'Sun']", 'action' => 'block'])]]);
 
         self::assertSame('ok', self::client($ruleSet, now: '2026-10-28')->request('GET', 'https://example.com/')->getContent());
 
@@ -78,10 +78,10 @@ final class FirewallHttpClientTest extends FirewallTestCase
     {
         $ruleSet = self::ruleSet([
             'default' => 'block',
-            'chains' => ['trusted' => self::chain([['when' => "method == 'DELETE'", 'action' => 'block']])],
+            'chains' => ['trusted' => self::chain([['if' => "method == 'DELETE'", 'action' => 'block']])],
             'rules' => [
-                self::rule(['when' => "host == 'api.example.com'", 'jump' => ['trusted']]),
-                self::rule(['when' => "host == 'api.example.com'", 'action' => 'allow']),
+                self::rule(['if' => "host == 'api.example.com'", 'jump' => ['trusted']]),
+                self::rule(['if' => "host == 'api.example.com'", 'action' => 'allow']),
             ],
         ]);
         $client = self::client($ruleSet);
@@ -95,8 +95,8 @@ final class FirewallHttpClientTest extends FirewallTestCase
     public function testTagsSetByOneRuleAreVisibleToTheNext(): void
     {
         $client = self::client(self::ruleSet(['rules' => [
-            self::rule(['when' => "host ends with '.example.com'", 'tag' => ['external']]),
-            self::rule(['when' => "tags.external and method != 'GET'", 'action' => 'block']),
+            self::rule(['if' => "host ends with '.example.com'", 'tag' => ['external']]),
+            self::rule(['if' => "tags.external and method != 'GET'", 'action' => 'block']),
         ]]));
 
         self::assertSame('ok', $client->request('GET', 'https://a.example.com/')->getContent());
@@ -110,7 +110,7 @@ final class FirewallHttpClientTest extends FirewallTestCase
     {
         $client = self::client(self::ruleSet(['rules' => [
             self::rule(['tag' => ['pre-prod']]),
-            self::rule(['when' => "tags['pre-prod'] and not tags.never_set", 'action' => 'block']),
+            self::rule(['if' => "tags['pre-prod'] and not tags.never_set", 'action' => 'block']),
         ]]));
 
         $this->expectException(RequestBlockedException::class);
@@ -119,7 +119,7 @@ final class FirewallHttpClientTest extends FirewallTestCase
 
     public function testConnectPhaseBlocksOnceThePeerIpIsKnown(): void
     {
-        $ruleSet = self::ruleSet(['rules' => [self::rule(['when' => "ip_in('10.0.0.0/8')", 'action' => 'block', 'phase' => 'connect'])]]);
+        $ruleSet = self::ruleSet(['rules' => [self::rule(['if' => "ip_in('10.0.0.0/8')", 'action' => 'block', 'phase' => 'connect'])]]);
         $inner = new MockHttpClient(static function (string $method, string $url, array $options): MockResponse {
             $options['on_progress'](0, 0, ['primary_ip' => '10.1.2.3', 'connect_time' => 0.01]);
 
@@ -132,7 +132,7 @@ final class FirewallHttpClientTest extends FirewallTestCase
 
     public function testConnectPhaseAllowsOtherIpsAndKeepsCallersProgressCallback(): void
     {
-        $ruleSet = self::ruleSet(['rules' => [self::rule(['when' => 'connect_time > 1.0', 'action' => 'block', 'phase' => 'connect'])]]);
+        $ruleSet = self::ruleSet(['rules' => [self::rule(['if' => 'connect_time > 1.0', 'action' => 'block', 'phase' => 'connect'])]]);
         $inner = new MockHttpClient(static function (string $method, string $url, array $options): MockResponse {
             $options['on_progress'](5, 10, ['primary_ip' => '93.184.216.34', 'connect_time' => 0.2]);
 
@@ -152,8 +152,8 @@ final class FirewallHttpClientTest extends FirewallTestCase
     {
         $log = new RequestLog();
         $client = self::client(self::ruleSet(['rules' => [
-            self::rule(['when' => "host == 'nope.example.com'", 'action' => 'block']),
-            self::rule(['when' => 'true', 'tag' => ['seen']]),
+            self::rule(['if' => "host == 'nope.example.com'", 'action' => 'block']),
+            self::rule(['if' => 'true', 'tag' => ['seen']]),
         ]]), log: $log);
 
         $client->request('GET', 'https://example.com/')->getContent();

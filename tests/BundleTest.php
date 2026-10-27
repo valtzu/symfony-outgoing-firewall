@@ -11,7 +11,7 @@ final class BundleTest extends TestCase
 {
     public function testScopedClientHeadersReachTheRules(): void
     {
-        $kernel = new TestKernel(['rules' => [['when' => "headers['user-agent'] != 'foobar'", 'action' => 'block']]], mockTransport: true);
+        $kernel = new TestKernel(['rules' => [['if' => "headers['user-agent'] != 'foobar'", 'action' => 'block']]], mockTransport: true);
         $kernel->boot();
         $container = $kernel->getContainer();
 
@@ -24,7 +24,7 @@ final class BundleTest extends TestCase
 
     public function testFrameworkDefaultOptionsAndVariableProvidersReachTheRules(): void
     {
-        $kernel = new TestKernel(['rules' => [['when' => "headers['x-default'] == 'yes' and region == 'eu'", 'action' => 'block']]]);
+        $kernel = new TestKernel(['rules' => [['if' => "headers['x-default'] == 'yes' and region == 'eu'", 'action' => 'block']]]);
         $kernel->boot();
 
         $this->expectException(RequestBlockedException::class);
@@ -36,11 +36,11 @@ final class BundleTest extends TestCase
         $kernel = new TestKernel(mockTransport: true, firewall: [
             'default' => 'block',
             'chains' => [
-                'no_post' => [['when' => "method == 'POST'", 'action' => 'block']],
+                'no_post' => [['if' => "method == 'POST'", 'action' => 'block']],
             ],
             'rules' => [
-                ['when' => "host == 'example.com'", 'tag' => 'known', 'jump' => 'no_post'],
-                ['when' => "tags.known", 'action' => 'allow'],
+                ['if' => "host == 'example.com'", 'tag' => 'known', 'jump' => 'no_post'],
+                ['if' => "tags.known", 'action' => 'allow'],
             ],
         ]);
         $kernel->boot();
@@ -52,7 +52,7 @@ final class BundleTest extends TestCase
 
     public function testTaggedExpressionFunctionProvidersAreRegistered(): void
     {
-        $kernel = new TestKernel(['rules' => [['when' => 'always_true()', 'action' => 'block']]], mockTransport: true);
+        $kernel = new TestKernel(['rules' => [['if' => 'always_true()', 'action' => 'block']]], mockTransport: true);
         $kernel->boot();
 
         $this->expectException(RequestBlockedException::class);
@@ -86,12 +86,12 @@ final class BundleTest extends TestCase
         $this->expectException(InvalidConfigurationException::class);
         $this->expectExceptionMessage('at least one of "action", "jump" or "tag"');
 
-        (new TestKernel(['rules' => [['when' => 'true']]]))->boot();
+        (new TestKernel(['rules' => [['if' => 'true']]]))->boot();
     }
 
     public function testCollectorSummarisesRequests(): void
     {
-        $kernel = new TestKernel(['rules' => [['when' => "host == 'example.com'", 'action' => 'block']]]);
+        $kernel = new TestKernel(['rules' => [['if' => "host == 'example.com'", 'action' => 'block']]]);
         $kernel->boot();
         $container = $kernel->getContainer();
         $log = $container->get('test.log');

@@ -84,7 +84,7 @@ final class ValtzuOutgoingFirewallBundle extends AbstractBundle
                     ->thenInvalid('A rule needs at least one of "action", "jump" or "tag".')
                 ->end()
                 ->children()
-                    ->scalarNode('when')->info('Expression, the rule applies when it is truthy. Combined with the matchers below using "and".')->defaultNull()->end()
+                    ->scalarNode('if')->info('Expression, the rule applies when it is truthy. Combined with the matchers below using "and".')->defaultNull()->end()
                     ->append($this->matcherNode('method'))
                     ->append($this->matcherNode('scheme'))
                     ->append($this->matcherNode('host'))

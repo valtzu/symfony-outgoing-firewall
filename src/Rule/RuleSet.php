@@ -85,8 +85,8 @@ final readonly class RuleSet
             $conditions[] = 1 === \count($literals) ? \sprintf('%s == %s', $variable, $literals[0]) : \sprintf('%s in [%s]', $variable, implode(', ', $literals));
         }
 
-        if (null !== ($rule['when'] ?? null)) {
-            $conditions[] = [] === $conditions ? $rule['when'] : '('.$rule['when'].')';
+        if (null !== ($rule['if'] ?? null)) {
+            $conditions[] = [] === $conditions ? $rule['if'] : '('.$rule['if'].')';
         }
 
         return [] === $conditions ? 'true' : implode(' and ', $conditions);
