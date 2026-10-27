@@ -45,7 +45,7 @@
         {% set status_color = collector.countBlocked ? 'red' : 'yellow' %}
 
         {% set icon %}
-            <span class="sf-toolbar-icon">{{ source('@WebProfiler/Icon/http-client.svg') }}</span>
+            <span class="sf-toolbar-icon">{{ source('@ValtzuOutgoingFirewall/icon/shield.svg') }}</span>
             <span class="sf-toolbar-value">{{ collector.countBlocked ? collector.countBlocked ~ ' blocked' : collector.countLogged ~ ' logged' }}</span>
         {% endset %}
 
@@ -70,7 +70,7 @@
 
 {% block menu %}
     <span class="label {{ collector.requests ? (collector.countBlocked ? 'label-status-error' : '') : 'disabled' }}">
-        <span class="icon" aria-hidden="true">{{ source('@WebProfiler/Icon/http-client.svg') }}</span>
+        <span class="icon" aria-hidden="true">{{ source('@ValtzuOutgoingFirewall/icon/shield.svg') }}</span>
         <strong>Outgoing Firewall</strong>
         {% if collector.requests %}
             <span class="count">{{ collector.requests|length }}</span>

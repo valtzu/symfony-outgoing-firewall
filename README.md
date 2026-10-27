@@ -190,4 +190,4 @@ vendor/bin/phpunit
 
 ## License
 
-MIT
+MIT. The profiler icon is from [Tabler Icons](https://tabler.io/icons) (MIT).
