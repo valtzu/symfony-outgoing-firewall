@@ -59,6 +59,21 @@ final class BundleTest extends TestCase
         $kernel->getContainer()->get('test.plain')->request('GET', '/');
     }
 
+    public function testMatcherShorthandsFromConfig(): void
+    {
+        $kernel = new TestKernel(['rules' => [
+            ['host' => 'example.com', 'path' => '/admin', 'method' => ['post', 'delete'], 'action' => 'block'],
+        ]], mockTransport: true);
+        $kernel->boot();
+        $client = $kernel->getContainer()->get('test.plain');
+
+        self::assertSame('mocked', $client->request('GET', '/admin')->getContent());
+        self::assertSame('mocked', $client->request('POST', '/public')->getContent());
+
+        $this->expectException(RequestBlockedException::class);
+        $client->request('POST', '/admin');
+    }
+
     public function testInvalidConfigIsRejectedAtBuildTime(): void
     {
         $this->expectException(InvalidConfigurationException::class);

@@ -30,7 +30,7 @@ abstract class FirewallTestCase extends TestCase
      */
     protected static function rule(array $rule): array
     {
-        return $rule + ['when' => 'true', 'action' => null, 'jump' => [], 'tag' => [], 'phase' => null];
+        return $rule + ['when' => null, 'action' => null, 'jump' => [], 'tag' => [], 'phase' => null];
     }
 
     /**

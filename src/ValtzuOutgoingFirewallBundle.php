@@ -84,7 +84,12 @@ final class ValtzuOutgoingFirewallBundle extends AbstractBundle
                     ->thenInvalid('A rule needs at least one of "action", "jump" or "tag".')
                 ->end()
                 ->children()
-                    ->scalarNode('when')->info('Expression, the rule applies when it is truthy.')->defaultValue('true')->end()
+                    ->scalarNode('when')->info('Expression, the rule applies when it is truthy. Combined with the matchers below using "and".')->defaultNull()->end()
+                    ->append($this->matcherNode('method'))
+                    ->append($this->matcherNode('scheme'))
+                    ->append($this->matcherNode('host'))
+                    ->append($this->matcherNode('port'))
+                    ->append($this->matcherNode('path'))
                     ->enumNode('action')->values(['allow', 'block'])->defaultNull()->end()
                     ->arrayNode('jump')
                         ->beforeNormalization()->ifString()->then(static fn (string $chain): array => [$chain])->end()
@@ -99,5 +104,16 @@ final class ValtzuOutgoingFirewallBundle extends AbstractBundle
             ->end();
 
         return $rules;
+    }
+
+    private function matcherNode(string $name): ArrayNodeDefinition
+    {
+        $node = new ArrayNodeDefinition($name);
+        $node
+            ->info(\sprintf('Shorthand for "%s == value", or "%s in [values]" given a list.', $name, $name))
+            ->beforeNormalization()->ifTrue(static fn (mixed $value): bool => !\is_array($value))->then(static fn (mixed $value): array => [$value])->end()
+            ->scalarPrototype()->end();
+
+        return $node;
     }
 }

@@ -54,13 +54,25 @@ Rules run top to bottom. The first rule that decides (`action: allow` or `action
 
 | Key      | Meaning |
 |----------|---------|
-| `when`   | [Expression](https://symfony.com/doc/current/reference/formats/expression_language.html), the rule applies when it is truthy. Defaults to `true`. A literal `%` must be written `%%`, as in any container parameter. |
+| `when`   | [Expression](https://symfony.com/doc/current/reference/formats/expression_language.html), the rule applies when it is truthy. A literal `%` must be written `%%`, as in any container parameter. |
+| `method`, `scheme`, `host`, `port`, `path` | Shorthand matchers, see below. |
 | `action` | `allow` or `block`. Decides the request. |
 | `tag`    | A tag, or a list of tags, to put on the request. Rules further down see them as `tags.name` (or `tags['my-tag']`), which is `false` for any tag not set. |
 | `jump`   | A chain, or a list of chains, to evaluate. |
 | `phase`  | `request` (default) or `connect`, see below. |
 
 A rule needs at least one of `action`, `jump` or `tag`. When a rule matches, it first adds its tags, then runs its jumps, then applies its action.
+
+### Matcher shorthand
+
+For the common exact matches, skip the expression. These two rules are the same:
+
+```yaml
+- { host: foo.com, path: /bar, action: block }
+- { when: "host == 'foo.com' and path == '/bar'", action: block }
+```
+
+A list means "any of": `method: [POST, DELETE]` is `method in ['POST', 'DELETE']`. Matchers and `when` are combined with `and`, so `{ host: foo.com, when: "weekday == 'Sun'" }` needs both. Method, scheme and host are compared case-insensitively. The profiler shows the compiled expression.
 
 ### Variables
 

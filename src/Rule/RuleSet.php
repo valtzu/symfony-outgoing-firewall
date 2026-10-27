@@ -6,6 +6,8 @@ use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 
 final readonly class RuleSet
 {
+    private const MATCHERS = ['method', 'scheme', 'host', 'port', 'path'];
+
     /**
      * @param list<Rule>                $rules
      * @param array<string, list<Rule>> $chains
@@ -60,12 +62,49 @@ final readonly class RuleSet
         $phase = $explicitPhase ?? $chainPhase ?? ([] === $jump ? Phase::Request : null);
 
         return new Rule(
-            $rule['when'],
+            self::compileWhen($rule),
             null === $rule['action'] ? null : Action::from($rule['action']),
             $jump,
             $rule['tag'],
             $phase,
         );
+    }
+
+    /**
+     * @param array<string, mixed> $rule
+     */
+    private static function compileWhen(array $rule): string
+    {
+        $conditions = [];
+        foreach (self::MATCHERS as $variable) {
+            if ([] === ($values = $rule[$variable] ?? [])) {
+                continue;
+            }
+
+            $literals = array_map(static fn (mixed $value): string => self::literal(self::normalizeMatcherValue($variable, $value)), $values);
+            $conditions[] = 1 === \count($literals) ? \sprintf('%s == %s', $variable, $literals[0]) : \sprintf('%s in [%s]', $variable, implode(', ', $literals));
+        }
+
+        if (null !== ($rule['when'] ?? null)) {
+            $conditions[] = [] === $conditions ? $rule['when'] : '('.$rule['when'].')';
+        }
+
+        return [] === $conditions ? 'true' : implode(' and ', $conditions);
+    }
+
+    private static function normalizeMatcherValue(string $variable, string|int|float|bool $value): string|int
+    {
+        return match ($variable) {
+            'method' => strtoupper((string) $value),
+            'scheme', 'host' => strtolower((string) $value),
+            'port' => (int) $value,
+            default => (string) $value,
+        };
+    }
+
+    private static function literal(string|int $value): string
+    {
+        return \is_int($value) ? (string) $value : "'".addcslashes($value, "'\\")."'";
     }
 
     private function assertJumpsResolve(): void

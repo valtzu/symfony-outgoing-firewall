@@ -43,4 +43,29 @@ final class RuleSetTest extends FirewallTestCase
     {
         self::assertFalse(self::ruleSet(['rules' => [self::rule(['action' => 'block'])]])->hasConnectRules());
     }
+
+    /**
+     * @return iterable<string, array{array<string, mixed>, string}>
+     */
+    public static function matcherShorthands(): iterable
+    {
+        yield 'none' => [[], 'true'];
+        yield 'host and path' => [['host' => ['Foo.com'], 'path' => ['/bar']], "host == 'foo.com' and path == '/bar'"];
+        yield 'list' => [['method' => ['get', 'head']], "method in ['GET', 'HEAD']"];
+        yield 'port is an int' => [['port' => ['8080']], 'port == 8080'];
+        yield 'quotes are escaped' => [['path' => ["/it's"]], "path == '/it\\'s'"];
+        yield 'combined with when' => [['host' => ['foo.com'], 'when' => "weekday == 'Sun' or hour < 6"], "host == 'foo.com' and (weekday == 'Sun' or hour < 6)"];
+        yield 'when alone is untouched' => [['when' => 'hour < 6'], 'hour < 6'];
+    }
+
+    /**
+     * @param array<string, mixed> $rule
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('matcherShorthands')]
+    public function testMatcherKeysCompileToAnExpression(array $rule, string $expected): void
+    {
+        $ruleSet = self::ruleSet(['rules' => [self::rule($rule + ['action' => 'block'])]]);
+
+        self::assertSame($expected, $ruleSet->rules[0]->when);
+    }
 }
