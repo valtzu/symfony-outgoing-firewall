@@ -11,7 +11,7 @@ final class BundleTest extends TestCase
 {
     public function testScopedClientHeadersReachTheRules(): void
     {
-        $kernel = new TestKernel(['rules' => [['when' => "header('user-agent') != 'foobar'", 'action' => 'block']]], mockTransport: true);
+        $kernel = new TestKernel(['rules' => [['when' => "headers['user-agent'] != 'foobar'", 'action' => 'block']]], mockTransport: true);
         $kernel->boot();
         $container = $kernel->getContainer();
 
@@ -24,7 +24,7 @@ final class BundleTest extends TestCase
 
     public function testFrameworkDefaultOptionsAndVariableProvidersReachTheRules(): void
     {
-        $kernel = new TestKernel(['rules' => [['when' => "header('x-default') == 'yes' and region == 'eu'", 'action' => 'block']]]);
+        $kernel = new TestKernel(['rules' => [['when' => "headers['x-default'] == 'yes' and region == 'eu'", 'action' => 'block']]]);
         $kernel->boot();
 
         $this->expectException(RequestBlockedException::class);

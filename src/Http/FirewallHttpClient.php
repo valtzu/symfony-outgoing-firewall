@@ -10,6 +10,7 @@ use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 use Symfony\Contracts\Service\ResetInterface;
 use Valtzu\OutgoingFirewall\Evaluation\Context;
 use Valtzu\OutgoingFirewall\Evaluation\Evaluator;
+use Valtzu\OutgoingFirewall\Evaluation\HeaderSet;
 use Valtzu\OutgoingFirewall\Evaluation\Trace;
 use Valtzu\OutgoingFirewall\Evaluation\VariableProviderInterface;
 use Valtzu\OutgoingFirewall\Profiler\RequestLog;
@@ -157,7 +158,7 @@ final class FirewallHttpClient implements HttpClientInterface, ResetInterface
             'port' => $parts['port'] ?? ('https' === $scheme ? 443 : 80),
             'path' => $parts['path'] ?? '/',
             'query' => $parts['query'] ?? '',
-            'headers' => $headers,
+            'headers' => new HeaderSet($headers),
             'now' => $now,
             'weekday' => $now->format('D'),
             'hour' => (int) $now->format('G'),

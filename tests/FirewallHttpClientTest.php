@@ -39,7 +39,7 @@ final class FirewallHttpClientTest extends FirewallTestCase
 
     public function testRequiredHeaderValue(): void
     {
-        $client = self::client(self::ruleSet(['rules' => [self::rule(['when' => "header('User-Agent') != 'foobar'", 'action' => 'block'])]]));
+        $client = self::client(self::ruleSet(['rules' => [self::rule(['when' => "headers['User-Agent'] != 'foobar'", 'action' => 'block'])]]));
 
         self::assertSame('ok', $client->request('GET', 'https://example.com/', ['headers' => ['User-Agent' => 'foobar']])->getContent());
 
@@ -49,7 +49,7 @@ final class FirewallHttpClientTest extends FirewallTestCase
 
     public function testHeadersSetThroughWithOptionsAndDefaultOptionsAreSeen(): void
     {
-        $ruleSet = self::ruleSet(['rules' => [self::rule(['when' => "header('x-env') != 'staging'", 'action' => 'block'])]]);
+        $ruleSet = self::ruleSet(['rules' => [self::rule(['when' => "headers['x-env'] != 'staging'", 'action' => 'block'])]]);
 
         self::assertSame('ok', self::client($ruleSet, defaultOptions: ['headers' => ['X-Env' => 'staging']])->request('GET', 'https://example.com/')->getContent());
         self::assertSame('ok', self::client($ruleSet)->withOptions(['headers' => ['X-Env' => 'staging']])->request('GET', 'https://example.com/')->getContent());
