@@ -14,7 +14,7 @@
             {% for rule in rules %}
                 <tr>
                     <td>{{ loop.index0 }}</td>
-                    <td><code>{{ rule.when }}</code></td>
+                    <td><code>{{ rule.if }}</code></td>
                     <td>{{ rule.effect }}</td>
                     <td>{{ rule.phase ?? 'request' }}</td>
                 </tr>
@@ -157,7 +157,7 @@
                                         <td>{{ step.phase }}</td>
                                         <td>{{ step.chain ?? '—' }}</td>
                                         <td>{{ step.index }}</td>
-                                        <td><code>{{ step.when }}</code></td>
+                                        <td><code>{{ step.if }}</code></td>
                                         <td>{{ step.matched ? 'yes' : 'no' }}</td>
                                         <td>{{ step.matched ? step.effect : '' }}</td>
                                     </tr>

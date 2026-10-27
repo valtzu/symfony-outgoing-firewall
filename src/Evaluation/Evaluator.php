@@ -39,8 +39,8 @@ final class Evaluator
                 continue;
             }
 
-            $matched = (bool) $this->language->evaluate($rule->when, $context->expressionValues());
-            $trace->record(new Step($phase, $chain, $index, $rule->when, $matched, $rule->describeEffect()));
+            $matched = (bool) $this->language->evaluate($rule->if, $context->expressionValues());
+            $trace->record(new Step($phase, $chain, $index, $rule->if, $matched, $rule->describeEffect()));
 
             if (!$matched) {
                 continue;

@@ -131,7 +131,7 @@ final class FirewallHttpClient implements HttpClientInterface, ResetInterface
         $step = [] === $record->steps ? null : $record->steps[array_key_last($record->steps)];
         throw new RequestBlockedException($method, $url, $record->decidedByDefault || null === $step
             ? 'no rule matched, default is block'
-            : \sprintf('%s rule #%d: %s', $step->chain ?? 'top-level', $step->index, $step->when));
+            : \sprintf('%s rule #%d: %s', $step->chain ?? 'top-level', $step->index, $step->if));
     }
 
     /**

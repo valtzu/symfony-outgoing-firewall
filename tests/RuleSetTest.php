@@ -54,8 +54,8 @@ final class RuleSetTest extends FirewallTestCase
         yield 'list' => [['method' => ['get', 'head']], "method in ['GET', 'HEAD']"];
         yield 'port is an int' => [['port' => ['8080']], 'port == 8080'];
         yield 'quotes are escaped' => [['path' => ["/it's"]], "path == '/it\\'s'"];
-        yield 'combined with when' => [['host' => ['foo.com'], 'if' => "weekday == 'Sun' or hour < 6"], "host == 'foo.com' and (weekday == 'Sun' or hour < 6)"];
-        yield 'when alone is untouched' => [['if' => 'hour < 6'], 'hour < 6'];
+        yield 'combined with if' => [['host' => ['foo.com'], 'if' => "weekday == 'Sun' or hour < 6"], "host == 'foo.com' and (weekday == 'Sun' or hour < 6)"];
+        yield 'if alone is untouched' => [['if' => 'hour < 6'], 'hour < 6'];
     }
 
     /**
@@ -66,6 +66,6 @@ final class RuleSetTest extends FirewallTestCase
     {
         $ruleSet = self::ruleSet(['rules' => [self::rule($rule + ['action' => 'block'])]]);
 
-        self::assertSame($expected, $ruleSet->rules[0]->when);
+        self::assertSame($expected, $ruleSet->rules[0]->if);
     }
 }

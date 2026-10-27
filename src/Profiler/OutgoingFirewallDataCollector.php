@@ -43,7 +43,7 @@ final class OutgoingFirewallDataCollector extends DataCollector implements LateD
                     'phase' => $step->phase->value,
                     'chain' => $step->chain,
                     'index' => $step->index,
-                    'when' => $step->when,
+                    'if' => $step->if,
                     'matched' => $step->matched,
                     'effect' => $step->effect,
                 ], $record->steps),
@@ -108,7 +108,7 @@ final class OutgoingFirewallDataCollector extends DataCollector implements LateD
     private function describeRules(array $rules): array
     {
         return array_map(static fn (Rule $rule): array => [
-            'when' => $rule->when,
+            'if' => $rule->if,
             'effect' => $rule->describeEffect(),
             'phase' => $rule->phase?->value,
         ], $rules);

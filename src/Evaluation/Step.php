@@ -10,7 +10,7 @@ final readonly class Step
         public Phase $phase,
         public ?string $chain,
         public int $index,
-        public string $when,
+        public string $if,
         public bool $matched,
         public string $effect,
     ) {

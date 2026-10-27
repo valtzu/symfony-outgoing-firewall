@@ -9,7 +9,7 @@ final readonly class Rule
      * @param list<string> $tag
      */
     public function __construct(
-        public string $when,
+        public string $if,
         public ?Action $action,
         public array $jump,
         public array $tag,
