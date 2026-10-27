@@ -1,6 +1,6 @@
 # Symfony Outgoing Firewall
 
-A rule-based firewall for outgoing requests made through Symfony's `HttpClientInterface`, configured much like `access_control` for incoming ones: ordered rules, expressions, first match wins.
+A rule-based firewall for outgoing requests made through Symfony's `HttpClientInterface`, configured somewhat like `access_control` for incoming ones: ordered rules, expressions, first match wins.
 
 ```yaml
 # config/packages/outgoing_firewall.yaml
