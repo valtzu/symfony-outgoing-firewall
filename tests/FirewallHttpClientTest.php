@@ -64,6 +64,30 @@ final class FirewallHttpClientTest extends FirewallTestCase
         $client->request('GET', '/v1/things');
     }
 
+    public function testExtraOptionsCanBeReadAndMissingKeysAreNull(): void
+    {
+        $ruleSet = self::ruleSet(['rules' => [
+            self::rule(['if' => "extra['target'] == 'billing' and extra['nope'] === null", 'action' => 'block']),
+        ]]);
+
+        self::assertSame('ok', self::client($ruleSet)->request('GET', 'https://example.com/')->getContent());
+        self::assertSame('ok', self::client($ruleSet)->request('GET', 'https://example.com/', ['extra' => ['target' => 'other']])->getContent());
+
+        $this->expectException(RequestBlockedException::class);
+        self::client($ruleSet)->request('GET', 'https://example.com/', ['extra' => ['target' => 'billing']]);
+    }
+
+    public function testExtraFromWithOptionsAndDefaultOptionsIsMerged(): void
+    {
+        $ruleSet = self::ruleSet(['rules' => [
+            self::rule(['if' => "extra['target'] == 'billing' and extra['use_persistent_connections']", 'action' => 'block']),
+        ]]);
+        $client = self::client($ruleSet, defaultOptions: ['extra' => ['use_persistent_connections' => true]])->withOptions(['extra' => ['target' => 'billing']]);
+
+        $this->expectException(RequestBlockedException::class);
+        $client->request('GET', 'https://example.com/');
+    }
+
     public function testWeekday(): void
     {
         $ruleSet = self::ruleSet(['rules' => [self::rule(['if' => "weekday in ['Sat', 'Sun']", 'action' => 'block'])]]);

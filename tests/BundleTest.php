@@ -89,6 +89,18 @@ final class BundleTest extends TestCase
         $client->request('POST', '/');
     }
 
+    public function testExtraOptionOfAScopedClientReachesTheRules(): void
+    {
+        $kernel = new TestKernel(['rules' => [['if' => "extra['target'] == 'plain'", 'action' => 'block']]], mockTransport: true);
+        $kernel->boot();
+        $container = $kernel->getContainer();
+
+        self::assertSame('mocked', $container->get('test.github')->request('GET', '/zen')->getContent());
+
+        $this->expectException(RequestBlockedException::class);
+        $container->get('test.plain')->request('GET', '/');
+    }
+
     public function testInvalidConfigIsRejectedAtBuildTime(): void
     {
         $this->expectException(InvalidConfigurationException::class);

@@ -63,7 +63,7 @@ final class TestKernel extends Kernel
                 'default_options' => ['headers' => ['X-Default' => 'yes']],
                 'scoped_clients' => [
                     'github.client' => ['base_uri' => 'https://api.github.com', 'headers' => ['User-Agent' => 'foobar']],
-                    'plain.client' => ['base_uri' => 'https://example.com'],
+                    'plain.client' => ['base_uri' => 'https://example.com', 'extra' => ['target' => 'plain']],
                 ],
             ],
         ]);

@@ -98,6 +98,7 @@ In an expression, a tag is `tags.name` (or `tags['my-tag']`), which is `false` f
 | `scheme`, `host`, `port`, `path`, `query` | Parts of the resolved URL. `host` is lowercase. |
 | `tags` | Tags set by earlier rules: `tags.name` is `true` or `false` |
 | `headers` | Request headers, read as `headers['User-Agent']`: case-insensitive, several values joined with `, `, `null` when absent. Includes headers from `default_options`, scoped clients and `withOptions()`. |
+| `extra` | The request's `extra` option, read as `extra['target']`, `null` when not set. See below. |
 | `now`, `weekday`, `hour` | Current time (from the `clock` service), `Mon`..`Sun`, `0`..`23` |
 | `ip`, `connect_time` | Peer IP and connect time in seconds, `null` until the connection is made (connect phase) |
 
@@ -108,6 +109,23 @@ In an expression, a tag is `tags.name` (or `tags['my-tag']`), which is `false` f
 | `ip_in(ranges)` | Whether `ip` is in a CIDR range or a list of them |
 
 Everything else from Symfony's ExpressionLanguage is available (`matches`, `in`, `starts with`, `ends with`, `contains`, `now.format('H')`, ...).
+
+### Telling your own requests apart
+
+The firewall sees URLs and headers, not which part of your code made the request. To tell integrations apart, put a marker in Symfony's `extra` request option, which HttpClient passes along untouched. Setting it once on a client or scoped client tags everything that client sends:
+
+```yaml
+framework:
+    http_client:
+        scoped_clients:
+            billing.client:
+                base_uri: https://billing.example.com
+                extra: { target: billing }
+```
+
+```yaml
+- { if: "extra['target'] == 'billing' and weekday in ['Sat', 'Sun']", action: block }
+```
 
 ## Chains
 

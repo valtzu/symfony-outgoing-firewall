@@ -12,6 +12,7 @@ use Symfony\Contracts\Service\ResetInterface;
 use Valtzu\OutgoingFirewall\Evaluation\Context;
 use Valtzu\OutgoingFirewall\Evaluation\Evaluator;
 use Valtzu\OutgoingFirewall\Evaluation\HeaderSet;
+use Valtzu\OutgoingFirewall\Evaluation\OptionMap;
 use Valtzu\OutgoingFirewall\Evaluation\Trace;
 use Valtzu\OutgoingFirewall\Evaluation\VariableProviderInterface;
 use Valtzu\OutgoingFirewall\Profiler\RequestLog;
@@ -47,7 +48,7 @@ final class FirewallHttpClient implements HttpClientInterface, ResetInterface
         [$parts, $prepared] = self::prepareRequest($method, $url, $options, $this->defaultOptions, true);
         $fullUrl = implode('', $parts);
 
-        $context = new Context($this->createVariables($method, $fullUrl, $prepared['normalized_headers']));
+        $context = new Context($this->createVariables($method, $fullUrl, $prepared['normalized_headers'], $prepared['extra'] ?? []));
         $trace = new Trace();
         $record = new RequestRecord($method, $fullUrl);
         $action = $this->evaluator->evaluate(Phase::Request, $context, $trace);
@@ -168,10 +169,11 @@ final class FirewallHttpClient implements HttpClientInterface, ResetInterface
 
     /**
      * @param array<string, list<string>> $normalizedHeaders
+     * @param array<string, mixed>        $extra
      *
      * @return array<string, mixed>
      */
-    private function createVariables(string $method, string $url, array $normalizedHeaders): array
+    private function createVariables(string $method, string $url, array $normalizedHeaders, array $extra): array
     {
         $parts = parse_url($url);
         $scheme = $parts['scheme'] ?? 'http';
@@ -191,6 +193,7 @@ final class FirewallHttpClient implements HttpClientInterface, ResetInterface
             'path' => $parts['path'] ?? '/',
             'query' => $parts['query'] ?? '',
             'headers' => new HeaderSet($headers),
+            'extra' => new OptionMap($extra),
             'now' => $now,
             'weekday' => $now->format('D'),
             'hour' => (int) $now->format('G'),
