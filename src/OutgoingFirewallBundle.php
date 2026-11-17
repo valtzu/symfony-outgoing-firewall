@@ -12,7 +12,7 @@ use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 use Valtzu\OutgoingFirewall\DependencyInjection\DecorateTransportsPass;
 use Valtzu\OutgoingFirewall\Rule\RuleSet;
 
-final class ValtzuOutgoingFirewallBundle extends AbstractBundle
+final class OutgoingFirewallBundle extends AbstractBundle
 {
     protected string $extensionAlias = 'outgoing_firewall';
 

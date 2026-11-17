@@ -11,7 +11,7 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpKernel\Kernel;
-use Valtzu\OutgoingFirewall\ValtzuOutgoingFirewallBundle;
+use Valtzu\OutgoingFirewall\OutgoingFirewallBundle;
 
 final class TestKernel extends Kernel
 {
@@ -28,7 +28,7 @@ final class TestKernel extends Kernel
     public function registerBundles(): iterable
     {
         yield new FrameworkBundle();
-        yield new ValtzuOutgoingFirewallBundle();
+        yield new OutgoingFirewallBundle();
     }
 
     public function getCacheDir(): string

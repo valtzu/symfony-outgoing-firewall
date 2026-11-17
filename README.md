@@ -38,7 +38,7 @@ Register the bundle if Flex did not:
 
 ```php
 // config/bundles.php
-Valtzu\OutgoingFirewall\ValtzuOutgoingFirewallBundle::class => ['all' => true],
+Valtzu\OutgoingFirewall\OutgoingFirewallBundle::class => ['all' => true],
 ```
 
 By default the firewall decorates `http_client.transport`, the service every FrameworkBundle client ends up in (`http_client` and all `scoped_clients`). Because scoped clients merge their own options before reaching it, the rules see their headers and resolved URLs. Use `transports` to protect other services:
