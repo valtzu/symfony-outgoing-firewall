@@ -4,6 +4,9 @@ namespace Valtzu\OutgoingFirewall\Tests;
 
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
+use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 use Valtzu\OutgoingFirewall\Http\RequestBlockedException;
 use Valtzu\OutgoingFirewall\Profiler\RequestLog;
 use Valtzu\OutgoingFirewall\Rule\Action;
@@ -14,6 +17,42 @@ final class FirewallHttpClientTest extends FirewallTestCase
     public function testDefaultAllowPassesRequestsWithoutRules(): void
     {
         self::assertSame('ok', self::client(self::ruleSet([]))->request('GET', 'https://example.com/')->getContent());
+    }
+
+    public function testWebSocketUrlsAreEvaluatedWithTheirOwnScheme(): void
+    {
+        $seen = [];
+        $inner = new class($seen) implements HttpClientInterface {
+            public function __construct(public array &$seen)
+            {
+            }
+
+            public function request(string $method, string $url, array $options = []): ResponseInterface
+            {
+                $this->seen[] = $url;
+
+                return new MockResponse('ok');
+            }
+
+            public function stream(ResponseInterface|iterable $responses, ?float $timeout = null): ResponseStreamInterface
+            {
+                throw new \LogicException();
+            }
+
+            public function withOptions(array $options): static
+            {
+                return $this;
+            }
+        };
+        $client = self::client(self::ruleSet(['default' => 'block', 'rules' => [
+            self::rule(['if' => "scheme == 'wss' and host == 'feed.example.com' and port == 443", 'action' => 'allow']),
+        ]]), $inner);
+
+        $client->request('GET', 'wss://feed.example.com/ws');
+        self::assertSame(['wss://feed.example.com/ws'], $seen);
+
+        $this->expectException(RequestBlockedException::class);
+        $client->request('GET', 'wss://evil.example.com/ws');
     }
 
     public function testDefaultBlock(): void

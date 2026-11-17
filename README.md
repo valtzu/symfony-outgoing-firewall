@@ -94,7 +94,7 @@ In an expression, a tag is `tags.name` (or `tags['my-tag']`), which is `false` f
 
 | Name | Value |
 |------|-------|
-| `method`, `url` | Method and the full resolved URL |
+| `method`, `url` | Method and the full resolved URL. WebSocket URLs keep their `ws`/`wss` scheme (default ports 80/443), so the firewall can wrap a WebSocket client such as `valtzu/symfony-websocket-client`. |
 | `scheme`, `host`, `port`, `path`, `query` | Parts of the resolved URL. `host` is lowercase. |
 | `tags` | Tags set by earlier rules: `tags.name` is `true` or `false` |
 | `headers` | Request headers, read as `headers['User-Agent']`: case-insensitive, several values joined with `, `, `null` when absent. Includes headers from `default_options`, scoped clients and `withOptions()`. |

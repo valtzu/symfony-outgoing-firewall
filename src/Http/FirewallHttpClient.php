@@ -45,7 +45,12 @@ final class FirewallHttpClient implements HttpClientInterface, ResetInterface
 
     public function request(string $method, string $url, array $options = []): ResponseInterface
     {
-        [$parts, $prepared] = self::prepareRequest($method, $url, $options, $this->defaultOptions, true);
+        $webSocketScheme = 1 === preg_match('#^(wss?)://#i', $url, $matches) ? strtolower($matches[1]) : null;
+        $preparable = null === $webSocketScheme ? $url : 'http'.substr($url, 2);
+        [$parts, $prepared] = self::prepareRequest($method, $preparable, $options, $this->defaultOptions, true);
+        if (null !== $webSocketScheme) {
+            $parts['scheme'] = $webSocketScheme.':';
+        }
         $fullUrl = implode('', $parts);
 
         $context = new Context($this->createVariables($method, $fullUrl, $prepared['normalized_headers'], $prepared['extra'] ?? []));
@@ -189,7 +194,7 @@ final class FirewallHttpClient implements HttpClientInterface, ResetInterface
             'url' => $url,
             'scheme' => $scheme,
             'host' => strtolower($parts['host'] ?? ''),
-            'port' => $parts['port'] ?? ('https' === $scheme ? 443 : 80),
+            'port' => $parts['port'] ?? (\in_array($scheme, ['https', 'wss'], true) ? 443 : 80),
             'path' => $parts['path'] ?? '/',
             'query' => $parts['query'] ?? '',
             'headers' => new HeaderSet($headers),
